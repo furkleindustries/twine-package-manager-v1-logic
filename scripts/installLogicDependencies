@@ -21,9 +21,15 @@ args = parser.parse_args()
 
 # Install necessary system packages.
 cmd = ['apt-get', 'install', '--no-install-recommends', '-y',
-       'libhiredis-dev', 'libpq-dev', 'libxml2-dev', 'sudo']
+       'git', 'libhiredis-dev', 'libpq-dev', 'libxml2-dev', 'sudo', 'unzip',
+       'zip']
 proc = subprocess.Popen(cmd)
 proc.communicate()
+    # Install system packages necessary for Composer's installation.
+    cmd = ['apt-get', 'install', '--no-install-recommends', '-y', 'git',
+           'unzip', 'zip']
+    proc = subprocess.Popen(cmd)
+    proc.communicate()
 
 cmd = ['docker-php-ext-configure', 'pgsql', '-with-pgsql=/usr/local/pgsql']
 proc = subprocess.Popen(cmd)
@@ -35,34 +41,28 @@ proc.communicate()
 
 # Check whether Composer is already installed.
 cmd = ['composer', '-v']
-work_dir = '{}/../../'.format(dirname)
+work_dir = '{}/../'.format(dirname)
 try:
     proc = subprocess.Popen(cmd, cwd=work_dir)
     proc.communicate()
 except:
-    # Install system packages necessary for Composer's installation.
-    cmd = ['apt-get', 'install', '--no-install-recommends', '-y', 'git',
-           'unzip', 'zip']
+    # Get the composer installer. HTTPS is currently not working, unsure why.
+    url = 'http://getcomposer.org/installer'
+    file_name = '/tmp/composer-setup.php'
+    with request.urlopen(url) as response, open(file_name, 'wb') as out_file:
+        shutil.copyfileobj(response, out_file)
+
+    # Run the composer setup file.
+    cmd = ['php', file_name, '--install-dir=/usr/local/bin',
+           '--filename=composer']
     proc = subprocess.Popen(cmd)
     proc.communicate()
 
-# Get the composer installer. HTTPS is currently not working, unsure why.
-url = 'http://getcomposer.org/installer'
-file_name = '/tmp/composer-setup.php'
-with request.urlopen(url) as response, open(file_name, 'wb') as out_file:
-    shutil.copyfileobj(response, out_file)
-
-# Run the composer setup file.
-cmd = ['php', file_name, '--install-dir=/usr/local/bin',
-       '--filename=composer']
-proc = subprocess.Popen(cmd)
-proc.communicate()
-
-# Delete the composer setup file.
-os.remove('/tmp/composer-setup.php')
+    # Delete the composer setup file.
+    os.remove('/tmp/composer-setup.php')
 
 # Install all PHP library dependencies.
-vendor_path = '{}logic/vendor/'.format(work_dir)
+vendor_path = '{}vendor/'.format(work_dir)
 try:
     os.makedirs(vendor_path)
 except OSError as e:
@@ -93,17 +93,17 @@ except OSError as e:
 os.chown(cache_path_two, uid, gid)
 
 cmd = 'sudo -u www-data composer install --no-scripts --no-plugins'
-proc = subprocess.Popen(cmd, cwd='{}/logic'.format(work_dir), shell=True)
+proc = subprocess.Popen(cmd, cwd=work_dir, shell=True)
 proc.communicate()
 
 # Add private key for OAuth2 server.
-priv_path = '{}/logic/OAuth2/private.key'.format(work_dir)
+priv_path = '{}secrets/authorizationPrivate.key'.format(work_dir)
 cmd = ['openssl', 'genrsa', '-out', priv_path, '2048']
 proc = subprocess.Popen(cmd)
 proc.communicate()
 
 # Add public key for OAuth2 server.
-pub_path = '{}/logic/OAuth2/public.key'.format(work_dir)
+pub_path = '{}secrets/authorizationPublic.key'.format(work_dir)
 cmd = ['openssl', 'rsa', '-in', priv_path, '-pubout', '-out', pub_path]
 proc = subprocess.Popen(cmd)
 proc.communicate()
@@ -111,7 +111,7 @@ proc.communicate()
 # Create encryption key for OAuth2 server.
 cmd = ['php', '-r', 'echo base64_encode(random_bytes(32));']
 server_encryption_key = subprocess.check_output(cmd)
-with open('{}/logic/OAuth2/encryptionKey'.format(work_dir), 'wb') as f:
+with open('{}secrets/encryptionKey'.format(work_dir), 'wb') as f:
     f.write(server_encryption_key)
 
 # Create tpmClient entry in logic/OAuth2/clients.
@@ -121,14 +121,14 @@ tpmclient_encryption_key = subprocess.check_output(cmd).decode()
 entry = {
     'name': 'Twine Package Manager Client (FI)',
     'description': 'A full service TwinePM client by Furkle Industries.',
-    # TODO: Get Docker env file variables to register for python. 
-    'domain': '{}/tpmClient'.format(server_url),
+    # TODO: Get Docker env file variables to register for python.
+    'domain': '{}/client'.format(server_url),
     'redirectPath': 'authorize/',
     'isConfidential': False,
     'secret': tpmclient_encryption_key,
 }
 
-clients_path = '{}/logic/OAuth2/clients/'.format(work_dir)
+clients_path = '{}secrets/authorizationClients/'.format(work_dir)
 try:
     os.makedirs(clients_path)
 except OSError as e:
