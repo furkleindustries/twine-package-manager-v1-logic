@@ -1,9 +1,12 @@
-language: php
+sudo: required
 
-php:
-  - 7.1
+language: python3
 
-before_script:
-  - sudo scripts/installLogicDependencies
+services:
+  - docker
 
-script: vendor/bin/phpunit .
+before_install:
+  - docker build -t logic .
+  - docker run -d logic
+
+script: docker exec -t logic /etc/twine-package-manager-logic/vendor/bin/phpunit --configuration /etc/twine-package-manager-logic/phpunit.xml
