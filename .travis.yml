@@ -4,7 +4,6 @@ php:
   - 7.1
 
 before_script:
-  - ls -l
-  - scripts/installLogicDependencies
+  - sudo scripts/installLogicDependencies
 
 script: vendor/bin/phpunit .
