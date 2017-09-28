@@ -185,11 +185,11 @@ shutil.rmtree(phpiredis_path)
 
 # Copy the logging configuration to the php-fpm config directory, making sure
 # it's loaded last.
-shutil.copyfile('/etc/twinepm-server-heroku/logic/log.conf',
+shutil.copyfile('{}../log.conf',
                 '/usr/local/etc/php-fpm.d/zz-log.conf')
 
 # Make the directory for the logs.
-logs_path = '{}/logs'.format(work_dir)
+logs_path = '{}../logs'.format(work_dir)
 try:
     os.makedirs(logs_path)
 except OSError as e:
