@@ -3,13 +3,8 @@ language: php
 php:
   - 7.1
 
-install:
-  - sudo apt-get update
-  - sudo apt-get install -y --force-yes composer git php7.1-mbstring php7.1-pdo python3
-
 before_script:
   - ls -l
-  - cd /etc/twine-package-manager-logic/
   - scripts/installLogicDependencies
 
 script: vendor/bin/phpunit .
