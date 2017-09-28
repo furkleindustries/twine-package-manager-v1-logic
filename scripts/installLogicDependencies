@@ -91,6 +91,10 @@ cmd = 'sudo -u www-data composer install --no-scripts --no-plugins'
 proc = subprocess.Popen(cmd, cwd=work_dir, shell=True)
 proc.communicate()
 
+cmd = ['mkdir', '{}secrets'.format(work_dir)]
+proc = subprocess.Popen(cmd)
+proc.communicate()
+
 # Add private key for OAuth2 server.
 priv_path = '{}secrets/authorizationPrivate.key'.format(work_dir)
 cmd = ['openssl', 'genrsa', '-out', priv_path, '2048']
