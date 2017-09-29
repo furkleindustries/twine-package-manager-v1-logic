@@ -2,9 +2,9 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
-class AccountCreationEndpoint extends AbstractEndpoint { 
-    function execute(ContainerInterface $container): ResponseInterface {
+use Slim\Container;
+class AccountCreateEndpoint extends AbstractEndpoint { 
+    function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $source = $request->getParsedBody();
 
@@ -62,5 +62,9 @@ class AccountCreationEndpoint extends AbstractEndpoint {
         $body->write($successStr);
         $response = $container->get("response")->withBody($body);
         return $response;
+    }
+
+    function getOptionsObject(): array {
+
     }
 }

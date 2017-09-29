@@ -2,7 +2,7 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Psr\Container\ContainerInterface;
+use Slim\Container;
 use TwinePM\Exceptions\UserRequestFieldInvalidException;
 class PackagesSearchEndpoint extends AbstractEndpoint {
     function __invoke(ContainerInterface $container): ResponseInterface {

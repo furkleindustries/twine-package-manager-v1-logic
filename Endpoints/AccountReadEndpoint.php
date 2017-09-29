@@ -2,9 +2,9 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 class AccountReadEndpoint extends AbstractEndpoint {
-    function execute(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $token = $container->get("authorizeToken");
         $getFromToken = $container->get("getFromToken");
         $sqlAbstractionType = "account";

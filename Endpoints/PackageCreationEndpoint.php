@@ -2,9 +2,9 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 class PackageCreationEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $source = $request->getParsedBody();
         $package = $container->get("packageBuilder")($source);
         $package->serializeToDatabase();

@@ -1,17 +1,21 @@
 <?php
-use \TwinePM\Endpoints\AbstractEndpoint;
 use PHPUnit\Framework\TestCase;
+use TwinePM\Endpoints\AbstractEndpoint;
 
 class AbstractEndpointTest extends TestCase {
-    public function testGetClientErrorCode() {
-        $stub = $this->getMockForAbstractClass(
-            "\TwinePM\Endpoints\AbstractEndpoint");
+    function testGetOptionsJson() {
+        $stub = $this->getMockForAbstractClass(AbstractEndpoint::class);
 
-        $this->assertEquals($stub->getClientErrorCode(null), "NoCodeProvided");
-        $this->assertEquals($stub->getClientErrorCode("FooBarBaz"), "FooBarBaz");
-    }
+        $retObj = [
+            "foo" => "1",
+            "bar" => "2",
+        ];
 
-    public function testConvertServerErrorToClientError() {
-        
+        $stub
+            ->expects($this->once())
+            ->method("getOptionsObject")
+            ->willReturn($retObj);
+
+        $this->assertEquals($stub->getOptionsJson(), json_encode($retObj));
     }
 }

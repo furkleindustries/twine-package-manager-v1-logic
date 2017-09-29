@@ -2,9 +2,9 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 class AccountDeletionEndpoint extends AbstractEndpoint { 
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         /* Collect all data owned by the user. */
         $getFromToken = $container->get("getFromToken");
         $token = $request->getHeader("Authorization")[0];

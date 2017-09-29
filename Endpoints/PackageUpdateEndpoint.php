@@ -2,9 +2,9 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 class PackageUpdateEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $source = $container->getParsedBody();
 

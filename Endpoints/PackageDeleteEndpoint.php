@@ -1,15 +1,10 @@
 <?php
 namespace TwinePM\Endpoints;
 
-use \TwinePM\Responses;
-use \TwinePM\Packages\Package;
-use \TwinePM\Filters\IdFilter;
-use \TwinePM\Validators;
-use \Psr\Http\Message\ServerRequestInterface as IRequest;
-use \Psr\Container\ContainerInterface as IContainer;
-use \PDO;
+use Psr\Http\Message\ResponseInterface;
+use Slim\Container;
 class PackageDeleteEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $params = $request->getParsedBody();
         $source = [];
         if (array_key_exists("name", $params)) {

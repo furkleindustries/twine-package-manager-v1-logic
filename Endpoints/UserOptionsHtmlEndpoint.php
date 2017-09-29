@@ -1,18 +1,10 @@
 <?php
 namespace TwinePM\Endpoints;
 
-use \TwinePM\Responses;
-use \TwinePM\Getters\LoggedInUserGetter;
-use \TwinePM\SqlAbstractions\Authorizations\Authorization;
-use \TwinePM\Transformers\AuthorizationToTemplatingArrayTransformer;
-use \Psr\Container\ContainerInterface as IContainer;
-use \Psr\Http\Message\ServerRequestInterface as IRequest;
-use \League\OAuth2\Server\AuthorizationServer;
-use \Predis\Client as RedisClient;
-use \PDO;
+use Psr\Http\Message\ResponseInterface;
+use Slim\Container;
 class ServerUserOptionsGetEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface
-    {
+    function __invoke(Container $container): ResponseInterface {
         $currentUser = $container->get("loggedInUser");
         $templatingAuths = [];
         if ($currentUser) {

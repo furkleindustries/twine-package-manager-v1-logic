@@ -2,9 +2,9 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 class PackageGetEndpoint extends AbstractEndpoint {
-    function execute(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $params = $request->getQueryParams();
         if (array_key_exists("name", $params)) {

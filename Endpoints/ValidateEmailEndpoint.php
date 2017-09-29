@@ -3,12 +3,12 @@ namespace TwinePM\Endpoints;
 
 use Exception;
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 use TwinePM\Exceptions\PermissionDeniedException;
 use TwinePM\Exceptions\PersistenceFailedException;
 use TwinePM\Exceptions\UserRequestFieldInvalidException;
 class ValidateEmailEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $params = $request->getQueryParams();
         if (!array_key_exists("request", $params)) {
             $errorCode = "RequestInvalid";

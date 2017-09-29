@@ -2,11 +2,11 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 use TypeError;
 use TwinePM\DecryptionFailedException;
 class AuthorizePostEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $cookies = $request->getCookieParams();
         $user = $container->get("loggedInUser");

@@ -2,10 +2,10 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 use TwinePM\Exceptions\UserRequestFieldInvalidException;
 class UnauthorizePostEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $source = $request->getParsedBody();
         $authorization = null;

@@ -2,9 +2,9 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface as IContainer;
+use Slim\Container;
 class UnauthorizeHtmlEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $user = $container->get("loggedInUser");
         $sqlAbstractionType = "authorization";
         $getFromUserId = $container->get("getAbstractionFromUserId");

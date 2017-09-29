@@ -3,10 +3,10 @@ namespace TwinePM\Endpoints;
 
 use Exception;
 use Psr\Http\Message\ResponseInterface;
-use Slim\Container\ContainerInterface;
+use Slim\Container;
 use TwinePM\Exceptions\UserRequestFieldInvalidException;
 class LoginPostEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $params = $request->getParsedBody();
         $source = [];
         if (array_key_exists("name", $params)) {

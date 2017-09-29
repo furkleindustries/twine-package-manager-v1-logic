@@ -2,12 +2,12 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 use TwinePM\Exceptions\InvalidArgumentException;
 use TwinePM\Exceptions\NoResultExistsException;
 use TwinePM\Exceptions\PersistenceFailedException;
 class AuthorizationHtmlEndpoint extends AbstractEndpoint {
-    function __invoke(ContainerInterface $container): ResponseInterface {
+    function __invoke(Container $container): ResponseInterface {
         $source = $request->getQueryParams();
         if (!isset($source["state"]) or !$source["state"]) {
             $errorCode = "AuthorizationStateMissing";
