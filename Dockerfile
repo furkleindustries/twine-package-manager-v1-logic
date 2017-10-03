@@ -2,7 +2,7 @@ FROM php:7.1-fpm
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-RUN mkdir /etc/twine-package-manager/logic/
+RUN mkdir -p /etc/twine-package-manager/logic/
 
 WORKDIR /etc/twine-package-manager/logic/
 
