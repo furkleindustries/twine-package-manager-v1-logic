@@ -5,6 +5,7 @@ import errno
 import grp
 import json
 import os
+import pathlib
 import pwd
 import shutil
 import subprocess
@@ -58,33 +59,18 @@ except:
 
 # Install all PHP library dependencies.
 vendor_path = '{}vendor/'.format(work_dir)
-try:
-    os.makedirs(vendor_path)
-except OSError as e:
-    if e.errno != errno.EEXIST:
-        raise
+pathlib.Path(vendor_path).mkdir(parents=True, exist_ok=True)
 
 uid = pwd.getpwnam('www-data').pw_uid
 gid = grp.getgrnam('www-data').gr_gid
 os.chown(vendor_path, uid, gid)
 
 cache_path_one = '/var/www/.composer/cache/repo/https---packagist.org/'
-try:
-    os.makedirs(cache_path_one)
-except OSError as e:
-    if e.errno != errno.EEXIST:
-        raise
-
-cache_path_one = '/var/www/.composer/cache/repo/https---packagist.org/'
+pathlib.Path(cache_path_one).mkdir(parents=True, exist_ok=True)
 os.chown(cache_path_one, uid, gid)
 
 cache_path_two = '/var/www/.composer/cache/files/'
-try:
-    os.makedirs(cache_path_two)
-except OSError as e:
-    if e.errno != errno.EEXIST:
-        raise
-
+pathlib.Path('cache_path_two').mkdir(parents=True, exist_ok=True)
 os.chown(cache_path_two, uid, gid)
 
 cmd = 'sudo -u www-data composer install --no-scripts --no-plugins'
@@ -128,11 +114,7 @@ entry = {
 }
 
 clients_path = '{}secrets/authorizationClients/'.format(work_dir)
-try:
-    os.makedirs(clients_path)
-except OSError as e:
-    if e.errno != errno.EEXIST:
-        raise
+pathlib.Path(clients_path).mkdir(parents=True, exist_ok=True)
 
 # Dump the JSON with pretty-printing.
 dump = json.dumps(entry, indent=4)
@@ -190,10 +172,5 @@ shutil.copyfile('{}log.conf'.format(work_dir),
 
 # Make the directory for the logs.
 logs_path = '{}logs'.format(work_dir)
-try:
-    os.makedirs(logs_path)
-except OSError as e:
-    if e.errno != errno.EEXIST:
-        raise
-
+pathlib.Path(logs_path).mkdir(parents=True, exist_ok=True)
 os.chown(logs_path, uid, gid)
