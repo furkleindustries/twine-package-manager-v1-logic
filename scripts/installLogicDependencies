@@ -70,7 +70,7 @@ pathlib.Path(cache_path_one).mkdir(parents=True, exist_ok=True)
 os.chown(cache_path_one, uid, gid)
 
 cache_path_two = '/var/www/.composer/cache/files/'
-pathlib.Path('cache_path_two').mkdir(parents=True, exist_ok=True)
+pathlib.Path(cache_path_two).mkdir(parents=True, exist_ok=True)
 os.chown(cache_path_two, uid, gid)
 
 cmd = 'sudo -u www-data composer install --no-scripts --no-plugins'
