@@ -14,7 +14,7 @@ RUN \
         --no-install-recommends \
         --no-install-suggests \
         wget \
-        zlib1g && \
+        zlib1g-dev && \
     cd /tmp/ && \
     wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0a1.tar.xz && \
     tar xvf Python-3.7.0a1.tar.xz && \
