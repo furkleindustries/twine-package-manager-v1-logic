@@ -9,7 +9,7 @@ WORKDIR /etc/twine-package-manager/logic/
 COPY . .
 
 RUN \
-    cd /tmp/ &&
+    cd /tmp/ && \
     wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0a1.tar.xz && \
     tar xvf Python-3.7.0a1.tar.xz && \
     cd Python3.7.0a1/ && \
