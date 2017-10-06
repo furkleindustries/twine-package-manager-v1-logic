@@ -13,7 +13,7 @@ RUN \
     apt-get install -y \
         --no-install-recommends \
         --no-install-suggests \
-        wget
+        wget \
         zlib && \
     cd /tmp/ && \
     wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0a1.tar.xz && \
