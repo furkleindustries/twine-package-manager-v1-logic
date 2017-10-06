@@ -9,6 +9,8 @@ WORKDIR /etc/twine-package-manager/logic/
 COPY . .
 
 RUN \
+    apt-get update && \
+    apt-get install -y --no-install-recommends --no-install-suggests wget && \
     cd /tmp/ && \
     wget https://www.python.org/ftp/python/3.7.0/Python-3.7.0a1.tar.xz && \
     tar xvf Python-3.7.0a1.tar.xz && \
