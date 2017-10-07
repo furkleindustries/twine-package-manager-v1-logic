@@ -1,6 +1,6 @@
 # Use the official PHP-FPM 7.1 image as a base.
 # https://github.com/docker-library/php/blob/4c0766729088fa5c37d46ccd837386f0e91a33ac/7.1/fpm/Dockerfile
-FROM php7.1-fpm
+FROM php:7.1-fpm
 
 # Give full colors in the output.
 ARG TERM=xterm-256color
