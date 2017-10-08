@@ -14,6 +14,7 @@ use Slim\Views\Twig;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use TwinePM\Endpoints;
+use TwinePM\Exceptions\ITwinePmException;
 use TwinePM\Getters\TwinePmContainerGetter;
 use TwinePM\Loggers\AccessLogger;
 use TwinePM\Loggers\LoggerRouter;
@@ -41,6 +42,8 @@ $dependencyContainerMiddleware = function (
             $e->getErrorCode());
 
         LoggerRouter::route($e);
+    } catch (Exception $e) {
+        die("Unknown error.");
     }
 
     return $response;
