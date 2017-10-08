@@ -25,7 +25,7 @@ $app = new App();
 $dependencyContainerMiddleware = function (
     Request $req,
     Response $res,
-    App $next)
+    Closure $next)
 {
     $settings = [
         "displayErrorDetails" => true,
@@ -51,7 +51,7 @@ $app->add($dependencyContainerMiddleware);
 $loggerMiddleware = function (
     Request $req,
     Response $res,
-    App $next)
+    Closure $next)
 {
     $accessLogger = new AccessLogger();
 
