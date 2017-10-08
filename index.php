@@ -23,9 +23,35 @@ use Monolog\Handler\StreamHandler;
 use Exception;
 use Closure;
 
-$app = new App($containerGetter($settings));
+$app = new App();
 
-$tpmMiddleware = function (
+$dependencyContainerMiddleware = function (
+    Request $req,
+    Response $res,
+    App $next)
+{
+    $settings = [
+        "displayErrorDetails" => true,
+    ];
+
+    $containerGetter = new TwinePmContainerGetter();
+    $next->container = $containerGetter($req, $settings);
+    try {
+        $response = $next($req, $res);
+    } catch (TwinePmException $e) {
+        $response = $response->withHeader(
+            "X-TwinePM-Error-Code",
+            $e->getErrorCode());
+
+        LoggerRouter::route($e);
+    }
+
+    return $response;
+}
+
+$app->add($dependencyContainerMiddleware);
+
+$loggerMiddleware = function (
     Request $req,
     Response $res,
     App $next)
@@ -54,27 +80,10 @@ $tpmMiddleware = function (
     }
 
     $accessLogger->log($logArray);
-
-    $settings = [
-        "displayErrorDetails" => true,
-    ];
-
-    $containerGetter = new TwinePmContainerGetter();
-    $next->container = $containerGetter($req, $settings);
-    try {
-        $response = $next($req, $res);
-    } catch (TwinePmException $e) {
-        $response = $response->withHeader(
-            "X-TwinePM-Error-Code",
-            $e->getErrorCode());
-
-        LoggerRouter::route($e);
-    }
-
-    return $response;
+    return $next($req, $res);
 };
 
-$app->add($tpmMiddleware);
+$app->add($loggerMiddleware);
 
 $root = function (Request $request, Response $response) {
     if ($request->isGet()) {
