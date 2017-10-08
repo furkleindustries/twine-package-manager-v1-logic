@@ -5,7 +5,6 @@ namespace TwinePM;
 
 require_once __DIR__ . "/vendor/autoload.php";
 
-use Closure;
 use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\Grant\ImplicitGrant;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
@@ -26,7 +25,7 @@ $app = new App();
 $dependencyContainerMiddleware = function (
     Request $req,
     Response $res,
-    Closure $next)
+    callable $next)
 {
     $settings = [
         "displayErrorDetails" => true,
@@ -54,7 +53,7 @@ $app->add($dependencyContainerMiddleware);
 $loggerMiddleware = function (
     Request $req,
     Response $res,
-    Closure $next)
+    callable $next)
 {
     $accessLogger = new AccessLogger();
 
