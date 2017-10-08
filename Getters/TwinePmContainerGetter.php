@@ -78,7 +78,7 @@ class TwinePmContainerGetter {
                         $port,
                         $dbName);
                 }
-            }
+            };
         };
 
         $container["request"] = $request;
