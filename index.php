@@ -5,20 +5,18 @@ namespace TwinePM;
 
 require_once __DIR__ . "/vendor/autoload.php";
 
-use TwinePM\Getters\TwinePmContainerGetter;
-use TwinePM\Endpoints;
-use TwinePM\OAuth2\Entities\UserEntity;
-use TwinePM\OAuth2\Entities\ClientEntity;
+use Closure;
+use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\Grant\ImplicitGrant;
+use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
 use Slim\App;
 use Slim\Views\Twig;
-use Slim\Views\TwigExtension;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
-use League\OAuth2\Server\AuthorizationServer;
-use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
-use Monolog\Logger;
-use Monolog\Handler\StreamHandler;
+use TwinePM\Endpoints;
+use TwinePM\OAuth2\Entities\ClientEntity;
+use TwinePM\OAuth2\Entities\UserEntity;
+use TwinePM\Getters\TwinePmContainerGetter;
 
 $app = new App();
 
