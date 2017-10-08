@@ -7,7 +7,6 @@ require_once __DIR__ . "/vendor/autoload.php";
 
 use TwinePM\Getters\TwinePmContainerGetter;
 use TwinePM\Endpoints;
-use TwinePM\Responses;
 use TwinePM\OAuth2\Entities\UserEntity;
 use TwinePM\OAuth2\Entities\ClientEntity;
 use League\OAuth2\Server\Grant\ImplicitGrant;
@@ -24,38 +23,15 @@ use Monolog\Handler\StreamHandler;
 use Exception;
 use Closure;
 
-$settings = [
-    "displayErrorDetails" => true,
-];
-
-$containerGetter = new TwinePmContainerGetter();
 $app = new App($containerGetter($settings));
 
-$container = $app->getContainer();
-$container[Twig::class] = function ($container) {
-    $view = new Twig(__DIR__ . "/templates/", [
-        'cache' => "/templates/cache/",
-    ]);
-    
-    /* Instantiate and add Slim specific extension. */
-    $untrimmed = str_ireplace(
-        "index.php",
-        "",
-        $container["request"]->getUri()->getBasePath());
-
-    $basePath = rtrim($untrimmed, "/");
-    $extension = new TwigExtension($container->get("router"), $basePath);
-    $view->addExtension($extension);
-
-    return $view;
-};
-
-$accessLogger = new AccessLogger();
-$loggerMiddleware = function (
+$tpmMiddleware = function (
     Request $req,
     Response $res,
-    App $next) use ($accessLogger)
+    App $next)
 {
+    $accessLogger = new AccessLogger();
+
     $bodyParams = $req->getParsedBody() ?? [];
     $logArray = [
         "query" => $req->getQueryParams(),
@@ -79,16 +55,26 @@ $loggerMiddleware = function (
 
     $accessLogger->log($logArray);
 
-    $response = $next($req, $res);
-    $errorCode = $response->getHeader("X-TwinePM-Error-Code");
-    if ($errorCode) {
-        LoggerRouter::route($errorCode[0]);
+    $settings = [
+        "displayErrorDetails" => true,
+    ];
+
+    $containerGetter = new TwinePmContainerGetter();
+    $next->container = $containerGetter($req, $settings);
+    try {
+        $response = $next($req, $res);
+    } catch (TwinePmException $e) {
+        $response = $response->withHeader(
+            "X-TwinePM-Error-Code",
+            $e->getErrorCode());
+
+        LoggerRouter::route($e);
     }
 
     return $response;
 };
 
-$app->add($loggerMiddleware);
+$app->add($tpmMiddleware);
 
 $root = function (Request $request, Response $response) {
     if ($request->isGet()) {
