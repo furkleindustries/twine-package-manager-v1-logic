@@ -12,7 +12,7 @@ from urllib import request
 
 # Get the directory in which the file is executing.
 dirname = os.path.dirname(os.path.realpath(__file__))
-work_dir = os.path.dirname(dirname)
+work_dir = os.path.dirname(dirname) + '/'
 
 # Create the default CLI help message.
 parser = argparse.ArgumentParser(description='Install dependencies for ' +
@@ -61,18 +61,19 @@ except:
     os.remove('/tmp/composer-setup.php')
 
 # Install all PHP library dependencies.
-vendor_path = '{}vendor/'.format(work_dir)
+vendor_path = work_dir + 'vendor/'
 pathlib.Path(vendor_path).mkdir(parents=True, exist_ok=True)
 
 uid = pwd.getpwnam('www-data').pw_uid
 gid = grp.getgrnam('www-data').gr_gid
 os.chown(vendor_path, uid, gid)
 
-cache_path_one = '/var/www/.composer/cache/repo/https---packagist.org/'
+composer_hidden = '/var/www/.composer/'
+cache_path_one = composer_hidden + 'cache/repo/https---packagist.org/'
 pathlib.Path(cache_path_one).mkdir(parents=True, exist_ok=True)
 os.chown(cache_path_one, uid, gid)
 
-cache_path_two = '/var/www/.composer/cache/files/'
+cache_path_two = composer_hidden + 'cache/files/'
 pathlib.Path(cache_path_two).mkdir(parents=True, exist_ok=True)
 os.chown(cache_path_two, uid, gid)
 
@@ -80,18 +81,19 @@ cmd = 'sudo -u www-data composer install --no-scripts --no-plugins'
 proc = subprocess.Popen(cmd, cwd=work_dir, shell=True)
 proc.communicate()
 
-cmd = ['mkdir', '{}secrets'.format(work_dir)]
+secrets_dir = work_dir + 'secrets/'
+cmd = ['mkdir', secrets_dir]
 proc = subprocess.Popen(cmd)
 proc.communicate()
 
 # Add private key for OAuth2 server.
-priv_path = '{}secrets/authorizationPrivate.key'.format(work_dir)
+priv_path = secrets_dir + 'authorizationPrivate.key'
 cmd = ['openssl', 'genrsa', '-out', priv_path, '2048']
 proc = subprocess.Popen(cmd)
 proc.communicate()
 
 # Add public key for OAuth2 server.
-pub_path = '{}secrets/authorizationPublic.key'.format(work_dir)
+pub_path = secrets_dir + 'authorizationPublic.key'
 cmd = ['openssl', 'rsa', '-in', priv_path, '-pubout', '-out', pub_path]
 proc = subprocess.Popen(cmd)
 proc.communicate()
@@ -99,13 +101,13 @@ proc.communicate()
 # Create encryption key for OAuth2 server.
 cmd = ['php', '-r', 'echo base64_encode(random_bytes(32));']
 server_encryption_key = subprocess.check_output(cmd)
-with open('{}secrets/encryptionKey'.format(work_dir), 'wb') as f:
+with open(secrets_dir + 'encryptionKey', 'w') as f:
     f.write(server_encryption_key)
 
 # Create tpmClient entry in logic/OAuth2/clients.
 cmd = ['php', '-r', 'echo base64_encode(random_bytes(128));']
 server_url = os.environ.get('SERVER_URL') or 'http://localhost:8000'
-tpmclient_encryption_key = subprocess.check_output(cmd).decode()
+tpmclient_encryption_key = subprocess.check_output(cmd).decode('utf-8')
 entry = {
     'name': 'Twine Package Manager Client (FI)',
     'description': 'A full service TwinePM client by Furkle Industries.',
@@ -116,20 +118,21 @@ entry = {
     'secret': tpmclient_encryption_key,
 }
 
-clients_path = '{}secrets/authorizationClients/'.format(work_dir)
+clients_path = secrets_dir + 'authorizationClients/'
 pathlib.Path(clients_path).mkdir(parents=True, exist_ok=True)
 
 # Dump the JSON with pretty-printing.
 dump = json.dumps(entry, indent=4)
-with open('{}/tpmClient.json'.format(clients_path), 'w') as f:
+with open(clients_path + 'tpmClient.json', 'w') as f:
     f.write(dump)
 
+temp_dir = '/tmp/'
 # Clone the phpiredis directory into the temporary directory.
 cmd = ['git', 'clone', 'https://github.com/nrk/phpiredis']
-proc = subprocess.Popen(cmd, cwd='/tmp/')
+proc = subprocess.Popen(cmd, cwd=temp_dir)
 proc.communicate()
 
-phpiredis_path = '/tmp/phpiredis/'
+phpiredis_path = temp_dir + 'phpiredis/'
 
 # phpize phpiredis.
 cmd = ['phpize']
@@ -152,7 +155,7 @@ proc = subprocess.Popen(cmd, cwd=phpiredis_path)
 proc.communicate()
 
 # Create an extension file for phpiredis.
-with open('{}/phpiredis.ini'.format(os.environ['PHP_INI_DIR']), 'w') as f:
+with open(os.environ['PHP_INI_DIR'] + '/phpiredis.ini', 'w') as f:
     f.write('extension=phpiredis.so')
 
 # Reload the php-fpm daemon.
@@ -170,10 +173,10 @@ shutil.rmtree(phpiredis_path)
 
 # Copy the logging configuration to the php-fpm config directory, making sure
 # it's loaded last.
-shutil.copyfile('{}log.conf'.format(work_dir),
-                '/usr/local/etc/php-fpm.d/zz-log.conf')
+log_conf = work_dir + 'log.conf'
+shutil.copyfile(log_conf, '/usr/local/etc/php-fpm.d/zz-log.conf')
 
 # Make the directory for the logs.
-logs_path = '{}logs'.format(work_dir)
+logs_path = work_dir + 'logs/'
 pathlib.Path(logs_path).mkdir(parents=True, exist_ok=True)
 os.chown(logs_path, uid, gid)
