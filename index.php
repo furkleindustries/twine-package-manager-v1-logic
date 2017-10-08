@@ -17,11 +17,8 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use League\OAuth2\Server\AuthorizationServer;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
-use League\OAuth2\Server\Exception\OAuthServerException;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
-use Exception;
-use Closure;
 
 $app = new App();
 
@@ -38,7 +35,7 @@ $dependencyContainerMiddleware = function (
     $next->container = $containerGetter($req, $settings);
     try {
         $response = $next($req, $res);
-    } catch (TwinePmException $e) {
+    } catch (ITwinePmException $e) {
         $response = $response->withHeader(
             "X-TwinePM-Error-Code",
             $e->getErrorCode());
