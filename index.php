@@ -44,7 +44,7 @@ $dependencyContainerMiddleware = function (
     }
 
     return $response;
-}
+};
 
 $app->add($dependencyContainerMiddleware);
 
