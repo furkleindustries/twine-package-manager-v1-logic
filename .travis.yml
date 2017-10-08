@@ -1,6 +1,9 @@
 sudo: required
 
-language: python3
+language: generic
+
+branches:
+  - master
 
 services:
   - docker
@@ -9,4 +12,4 @@ install:
   - docker build -t logic .
   - docker run -d --name logic logic
 
-script: docker exec -t logic /etc/twine-package-manager-logic/vendor/bin/phpunit --configuration /etc/twine-package-manager-logic/phpunit.xml
+script: docker exec -t logic vendor/bin/phpunit
