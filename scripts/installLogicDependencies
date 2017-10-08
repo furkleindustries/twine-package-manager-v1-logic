@@ -100,7 +100,7 @@ proc.communicate()
 
 # Create encryption key for OAuth2 server.
 cmd = ['php', '-r', 'echo base64_encode(random_bytes(32));']
-server_encryption_key = subprocess.check_output(cmd)
+server_encryption_key = subprocess.check_output(cmd).decode('utf-8')
 with open(secrets_dir + 'encryptionKey', 'w') as f:
     f.write(server_encryption_key)
 
