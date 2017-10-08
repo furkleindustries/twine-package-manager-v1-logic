@@ -34,7 +34,7 @@ $app = new App($containerGetter($settings));
 $container = $app->getContainer();
 $container[Twig::class] = function ($container) {
     $view = new Twig(__DIR__ . "/templates/", [
-        'cache' => false,
+        'cache' => "/templates/cache/",
     ]);
     
     /* Instantiate and add Slim specific extension. */

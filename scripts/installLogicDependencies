@@ -180,3 +180,8 @@ shutil.copyfile(log_conf, '/usr/local/etc/php-fpm.d/zz-log.conf')
 logs_path = work_dir + 'logs/'
 pathlib.Path(logs_path).mkdir(parents=True, exist_ok=True)
 os.chown(logs_path, uid, gid)
+
+# Make the directory for the template cache.
+template_cache_path = work_dir + 'templates/cache/'
+pathlib.Path(template_cache_path).mkdir(parents=True, exist_ok=True)
+os.chown(template_cache_path, uid, gid)
