@@ -14,9 +14,11 @@ use Slim\Views\Twig;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use TwinePM\Endpoints;
+use TwinePM\Getters\TwinePmContainerGetter;
+use TwinePM\Loggers\AccessLogger;
+use TwinePM\Loggers\LoggerRouter;
 use TwinePM\OAuth2\Entities\ClientEntity;
 use TwinePM\OAuth2\Entities\UserEntity;
-use TwinePM\Getters\TwinePmContainerGetter;
 
 $app = new App();
 
