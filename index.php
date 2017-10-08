@@ -24,7 +24,7 @@ use Monolog\Handler\StreamHandler;
 use Exception;
 use Closure;
 
-$settings = "settings" => [
+$settings = [
     "displayErrorDetails" => true,
 ];
 
