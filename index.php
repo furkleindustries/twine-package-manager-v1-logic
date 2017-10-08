@@ -28,7 +28,8 @@ $settings = [
     "displayErrorDetails" => true,
 ];
 
-$app = new App(TwinePmContainerGetter($settings));
+$containerGetter = new TwinePmContainerGetter();
+$app = new App($containerGetter($settings));
 
 $container = $app->getContainer();
 $container[Twig::class] = function ($container) {
