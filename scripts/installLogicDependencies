@@ -1,7 +1,6 @@
 #! /usr/bin/env python3
 
 import argparse
-import errno
 import grp
 import json
 import os
@@ -13,6 +12,7 @@ from urllib import request
 
 # Get the directory in which the file is executing.
 dirname = os.path.dirname(os.path.realpath(__file__))
+work_dir = os.path.dirname(dirname)
 
 # Create the default CLI help message.
 parser = argparse.ArgumentParser(description='Install dependencies for ' +
@@ -35,9 +35,12 @@ cmd = ['docker-php-ext-install', 'pdo_pgsql', 'pgsql']
 proc = subprocess.Popen(cmd)
 proc.communicate()
 
+pathlib.Path('/usr/share/tpm/').mkdir(parents=True, exist_ok=True)
+with open('/usr/share/tpm/index.php', 'w') as f:
+    f.write('<?php require_once "{}index.php"; ?>'.format(work_dir))
+
 # Check whether Composer is already installed.
 cmd = ['composer', '-v']
-work_dir = '{}/../'.format(dirname)
 try:
     proc = subprocess.Popen(cmd, cwd=work_dir)
     proc.communicate()
