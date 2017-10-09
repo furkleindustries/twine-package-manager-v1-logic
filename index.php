@@ -164,6 +164,7 @@ $loginMethods = [
     "GET",
     "POST",
     "DELETE",
+    "OPTIONS",
 ];
 
 $login = function (Request $request, Response $response): Response {
@@ -185,6 +186,7 @@ $login = function (Request $request, Response $response): Response {
 
     $loginHtml = $container->get("loginHtmlEndpoint");
     $loginCreate = $container->get("loginCreateEndpoint");
+    $loginDelete = $container->get("loginDeleteEndpoint");
     if ($request->isGet()) {
         $res = $loginHtml($container);
         $templateVars = isset($res->templateVars) ? $res->templateVars : [];
@@ -195,7 +197,15 @@ $login = function (Request $request, Response $response): Response {
         $serverUrl = $container->get("serverUrl");
         return $res
             ->withHeader("Access-Control-Allow-Origin", $serverUrl)
-            ->withRedirect("options", 302);
+            ->withRedirect("/options", 302);
+    } else if ($request->isDelete()) {
+        $res = $loginDelete($container);
+        $res = $this->get("processTpmResponse")($tpmResponse, $response);
+        if ($res->getHeader("X-TwinePM-Error-Code")) {
+            return $res;
+        }
+
+        return $res->withRedirect("/", 302);
     } else if ($request->isOptions()) {
         $options = [
             "POST" => $accountCreate->getOptionsObject(),
@@ -207,6 +217,10 @@ $login = function (Request $request, Response $response): Response {
 };
 
 $app->map($loginMethods, "/login[/]", $login);
+
+$logoutMethods = [
+    "GET",
+];
 
 $logout = function (Request $request, Response $response): Response {
     $container = $this;
@@ -226,33 +240,14 @@ $logout = function (Request $request, Response $response): Response {
     };
 
     if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\LogoutGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        $templateVars = $this->get("processTemplateVars")($tpmResponse);
+        $res = $logoutHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "logout.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
-    } else if ($request->isPost()) {
-        $container = $this;
-        $tpmResponse = Endpoints\LogoutPostEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        if ($res->getHeader("X-TwinePM-Error-Code")) {
-            return $res;
-        }
-
-        return $res->withRedirect("/", 302);
-    } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, POST, OPTIONS");
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     }
 };
 
-$app->map([ "GET", "POST", "OPTIONS", ], "/logout[/]", $logout);
+$app->map($logoutMethods, "/logout[/]", $logout);
 
 $authorization = function (Request $request, Response $response): Response {
     $container = $this;
