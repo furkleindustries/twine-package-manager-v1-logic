@@ -31,31 +31,43 @@ $dependencyContainerMiddleware = function (
         "displayErrorDetails" => true,
     ];
 
-    $containerGetter = new TwinePmContainerGetter();
-    $next->container = $containerGetter($req, $settings);
+    $this->container = $this->get("containerGetter")($req, $res, $settings);
+    $res = $response;
     try {
-        $response = $next($req, $res);
+        return $next($req, $res);
     } catch (ITwinePmException $e) {
         $response = $response->withHeader(
             "X-TwinePM-Error-Code",
             $e->getErrorCode());
 
-        LoggerRouter::route($e);
+        $this->get("loggerRouter")->route($e);
     } catch (Exception $e) {
+        /* TODO: Add real error handling. */
         die("Unknown error.");
     }
 
-    return $response;
+    return $res;
 };
 
 $app->add($dependencyContainerMiddleware);
+
+$noIframesMiddleware = function (
+    Request $req,
+    Response $res,
+    callable $next)
+{
+    $noIframesResponse = $res->withHeader("X-Frame-Options", "DENY");
+    return $next($req, $noIframesResponse);
+};
+
+$app->add($noIframesMiddleware);
 
 $loggerMiddleware = function (
     Request $req,
     Response $res,
     callable $next)
 {
-    $accessLogger = new AccessLogger();
+    $accessLogger = $this->get("accessLogger");
 
     $bodyParams = $req->getParsedBody() ?? [];
     $logArray = [
@@ -84,73 +96,135 @@ $loggerMiddleware = function (
 
 $app->add($loggerMiddleware);
 
+$rootMethods = [
+    "GET",
+];
+
 $root = function (Request $request, Response $response) {
-    if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\RootGetEndpoint::execute(
-            $request,
-            $container);
+    $container = $this;
 
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        $templateVars = $this->get("processTemplateVars")($tpmResponse);
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $versionMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $rootHtml = $container->get("rootHtmlEndpoint");
+    if ($request->isGet()) {
+        $res = $rootHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "index.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
-    } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, OPTIONS");
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     }
 };
 
-$app->map([ "GET", "OPTIONS", ], "[/]", $root);
+$app->map($rootMethods, "[/]", $root);
 
-$accountCreation = function(Request $request, Response $response) {
+$createAccountMethods = [
+    "GET",
+];
+
+$createAccount = function(Request $request, Response $response) {
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $versionMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $createAccountHtml = $container->get("createAccountHtmlEndpoint");
     if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\AccountCreationGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        $templateVars = $this->get("processTemplateVars")($tpmResponse);
+        $res = $createAccountHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "createAccount.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
-    } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, OPTIONS");
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     }
 };
 
-$app->map([ "GET", "OPTIONS", ], "/createAccount[/]", $accountCreation);
+$app->map($createAccountMethods, "/createAccount[/]", $createAccount);
+
+$loginMethods = [
+    "GET",
+    "POST",
+    "DELETE",
+];
 
 $login = function (Request $request, Response $response): Response {
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $versionMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $loginHtml = $container->get("loginHtmlEndpoint");
+    $loginCreate = $container->get("loginCreateEndpoint");
     if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\LoginGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        $templateVars = $this->get("processTemplateVars")($tpmResponse);
+        $res = $loginHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "login.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     } else if ($request->isPost()) {
-        $container = $this;
-        $tpmResponse = Endpoints\LoginPostEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        if ($res->getHeader("X-TwinePM-Error-Code")) {
-            return $res;
-        }
-
-        return $response->withRedirect("options", 302);
+        $res = $loginCreate($container);
+        $serverUrl = $container->get("serverUrl");
+        return $res
+            ->withHeader("Access-Control-Allow-Origin", $serverUrl);
+            ->withRedirect("options", 302);
     } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, POST, OPTIONS");
+        $options = [
+            "POST" => $accountCreate->getOptionsObject(),
+            "DELETE" => $accountDelete->getOptionsObject(),
+        ];
+
+        return $response->withJson($options);
     }
 };
 
-$app->map([ "GET", "POST", "OPTIONS", ], "/login[/]", $login);
+$app->map($loginMethods, "/login[/]", $login);
 
 $logout = function (Request $request, Response $response): Response {
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $versionMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
     if ($request->isGet()) {
         $container = $this;
         $tpmResponse = Endpoints\LogoutGetEndpoint::execute(
@@ -180,307 +254,349 @@ $logout = function (Request $request, Response $response): Response {
 
 $app->map([ "GET", "POST", "OPTIONS", ], "/logout[/]", $logout);
 
-$authorize = function (Request $request, Response $response): Response {
+$authorization = function (Request $request, Response $response): Response {
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $versionMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+    
+    $authorizationHtml = $container->get("authorizationHtmlEndpoint");
+    $authorizationCreate = $container->get("authorizationCreateEndpoint");
+    $authorizationDelete = $container->get("authorizationDeleteEndpoint");
     if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\AuthorizeGetEndpoint::execute(
-            $request,
-            $container);
-
-        $templateVars = $this->get("processTemplateVars")($tpmResponse);
-        $tpmResponse->templateVars = $templateVars;
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
+        $res = $authorizeHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "authorize.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     } else if ($request->isPost()) {
-        $domain = Getters\ServerDomainNameGetter::get();
-        $container = $this;
-        $tpmResponse = Endpoints\AuthorizePostEndpoint::execute(
-            $request,
-            $container);
+        $res = $authorizeCreate($container);
+        $server = $this->get("authorizationServer");
 
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        if ($res->getHeader("X-TwinePM-Error-Code")) {
-            return $res;
-        }
-
-        $server = $this->get(AuthorizationServer::class);
-        $redirect = $server->completeAuthorizationRequest(
-            $tpmResponse->authRequest,
+        /* Redirects to the target client's authorization endpoint. */
+        return $server->completeAuthorizationRequest(
+            $res->authRequest,
             $res);
-
-        return $redirect;
+    } else if ($request->isDelete()) {
+        return $authorizeDelete($container);
     } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, POST, OPTIONS");
+        $options = [
+            "POST" => $authorizeCreate->getOptionsObject(),
+            "DELETE" => $accountDelete->getOptionsObject(),
+        ];
+
+        return $res->withJson($options);
     }
 };
 
-$app->map([ "GET", "POST", "OPTIONS", ], "/authorize[/]", $authorize);
+$app->map($authorizationMethods, "/authorization[/]", $authorize);
+
+$unauthorizeMethods = [
+    "GET",
+];
 
 $unauthorize = function (Request $request, Response $response): Response {
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $clientsMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $unauthorizeMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $unauthorizeHtml = $container->get("unauthorizeHtmlEndpoint");
     if ($request->isGet()) {
         $container = $this;
-        $tpmResponse = Endpoints\UnauthorizeGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        $templateVars = $this->get("processTemplateVars")($tpmResponse);
+        $res = $unauthorizeHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "unauthorize.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
-    } else if ($request->isPost()) {
-        $container = $this;
-        $tpmResponse = Endpoints\UnauthorizePostEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, POST, OPTIONS");
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     }
 };
 
-$app->map([ "GET", "POST", "OPTIONS", ], "/unauthorize[/]", $unauthorize);
+$app->map($unauthorizeMethods, "/unauthorization[/]", $unauthorize);
+
+$clientsMethods = [
+    "GET",
+];
 
 $clients = function(Request $request, Response $response) {
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $clientsMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $clientsMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $clientsHtml = $container->get("clientsHtmlEndpoint");
     if ($request->isGet()) {
         $container = $this;
-        $tpmResponse = Endpoints\ClientsGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        $templateVars = $this->get("processTemplateVars")($tpmResponse);
+        $res = $clientsHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "clients.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
-    } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, POST, OPTIONS");
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     }
 };
 
-$app->map([ "GET", "OPTIONS", ], "/clients[/]", $clients);
+$app->map($clientsMethods, "/clients[/]", $clients);
+
+$optionsMethods = [
+    "GET",
+];
 
 $options = function(Request $request, Response $response) {
-    if ($request->isGet()) {
-        $res = $response->withHeader("X-Frame-Options", "DENY");
-        $container = $this;
-        $tpmResponse = Endpoints\ServerUserOptionsGetEndpoint::execute(
-            $request,
-            $container);
-
-        $templateVars = isset($tpmResponse->templateVars) ?
-            $tpmResponse->templateVars : [];
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        if ($res->getHeader("X-TwinePM-Error-Code")) {
-            return $res;
-        }
-
-        $filepath = "options.html.twig";
-        return $this->get(Twig::class)->render($res, $filepath, $templateVars);
-    } else if ($request->isOptions()) {
-        return $response->withHeader("Allow", "GET, POST, OPTIONS");
-    }
-};
-
-$app->map([ "GET", "OPTIONS", ], "/options[/]", $options);
-
-$account = function(Request $request, Response $response): Response {
-    $res = $response->withHeader(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS");
-
-    if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\AccountGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isPost()) {
-        $container = $this;
-        $tpmResponse = Endpoints\AccountCreationEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isPut()) {
-        $container = $this;
-        $tpmResponse = Endpoints\AccountUpdateEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isDelete()) {
-        $container = $this;
-        $tpmResponse = Endpoints\AccountDeleteEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isOptions()) {
-        $options = [
-            "GET" => Endpoints\AccountGetEndpoint::getOptionsObject(),
-            "POST" => Endpoints\AccountCreationEndpoint::getOptionsObject(),
-            "PUT" => Endpoints\AccountUpdateEndpoint::getOptionsObject(),
-            "DELETE" => Endpoints\AccountDeleteEndpoint::getOptionsObject(),
-        ];
-
-        return $res
-            ->withHeader("Allow", "GET, POST, PUT, DELETE, OPTIONS")
-            ->withJson($options);
-    }
-};
-
-$app->map(
-    [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "OPTIONS",
-    ],
-    "/account[/]",
-    $account);
-
-$profile = function (Request $request, Response $response): Response {
-    $res = $response->withHeader(
-        "Access-Control-Allow-Methods",
-        "GET, OPTIONS");
-
-    if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\ProfileGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isOptions()) {
-        $options = [
-            "GET" => Endpoints\ProfileGetEndpoint::getOptionsObject(),
-        ];
-
-        return $res->withHeader("Allow", "GET, OPTIONS")->withJson($options);
-    }
-};
-
-$app->map([ "GET", "OPTIONS", ], "/profile[/]", $profile);
-
-$package = function (Request $request, Response $response): Response {
-    $res = $response->withHeader(
-        "Access-Control-Allow-Methods",
-        "GET, POST, PUT, DELETE, OPTIONS");
-
-    if ($request->isGet()) {
-        $container = $this;
-        $tpmResponse = Endpoints\PackageGetEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isPost()) {
-        $container = $this;
-        $tpmResponse = Endpoints\PackageCreationEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isPut()) {
-        $container = $this;
-        $tpmResponse = Endpoints\PackageUpdateEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isDelete()) {
-        $container = $this;
-        $tpmResponse = Endpoints\PackageDeleteEndpoint::execute(
-            $request,
-            $container);
-
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isOptions()) {
-        $options = [
-            "GET" => Endpoints\PackageGetEndpoint::getOptionsObject(),
-            "POST" => Endpoints\PackageCreationEndpoint::getOptionsObject(),
-            "PUT" => Endpoints\PackageUpdateEndpoint::getOptionsObject(),
-            "DELETE" => Endpoints\PackageDeleteEndpoint::getOptionsObject(),
-        ];
-
-        return $res
-            ->withHeader("Allow", "GET, POST, PUT, DELETE, OPTIONS")
-            ->withJson($options);
-    }
-};
-
-$app->map(
-    [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "OPTIONS",
-    ],
-    "/package[/]",
-    $package);
-
-$version = function (Request $request, Response $response): Response {
     $container = $this;
-    $res = $this->get("processRestResponse")($response);
 
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $optionsMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $optionsMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $serverUserOptions = $container->get("ServerUserOptionsHtmlEndpoint");
     if ($request->isGet()) {
-        $tpmResponse = Endpoints\VersionGetEndpoint::execute(
-            $request,
-            $container);
-        
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isPost()) {
-        $tpmResponse = Endpoints\VersionCreationEndpoint::execute(
-            $request,
-            $container);
-        
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isDelete()) {
-        $tpmResponse = Endpoints\VersionDeleteEndpoint::execute(
-            $request,
-            $container);
-        
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        return $res;
-    } else if ($request->isOptions()) {
-        $options = [
-            "GET" => Endpoints\AccountGetEndpoint::getOptionsObject(),
-            "POST" => Endpoints\AccountCreationEndpoint::getOptionsObject(),
-            "DELETE" => Endpoints\AccountDeleteEndpoint::getOptionsObject(),
-        ];
-
-        return $res
-            ->withHeader("Allow", "GET, POST, PUT, DELETE, OPTIONS")
-            ->withJson($options);
+        $res = $serverUserOptions($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
+        $filepath = "options.html.twig";
+        return $this->get("templater")->render($res, $filepath, $templateVars);
     }
 };
 
-$app->map(
-    [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE",
-        "OPTIONS",
-    ],
-    "/version[/]",
-    $version);
+$app->map($optionsMethods, "/options[/]", $options);
+
+$accountMethods = [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE",
+    "OPTIONS",
+];
+
+$account = function(
+    Request $request,
+    Response $response)
+    use ($accountMethods): Response
+{
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $accountMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $accountMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $accountCreate = $this->get("accountCreationEndpoint");
+    $accountRead = $this->get("accountGetEndpoint");
+    $accountUpdate = $this->get("accountUpdateEndpoint");
+    $accountDelete = $this->get("accountDeleteEndpoint");
+    if ($request->isPost()) {
+        return $accountCreate($request, $res, $container);
+    } else if ($request->isGet()) {
+        return $accountRead($request, $res, $container);
+    } else if ($request->isPut()) {
+        return $accountUpdate($request, $res, $container);
+    } else if ($request->isDelete()) {
+        return $accountDelete($request, $res, $container);
+    } else if ($request->isOptions()) {
+        $options = [
+            "GET" => $accountRead->getOptionsObject(),
+            "POST" => $accountCreate->getOptionsObject(),
+            "PUT" => $accountUpdate->getOptionsObject(),
+            "DELETE" => $accountDelete->getOptionsObject(),
+        ];
+
+        return $res->withJson($options);
+    }
+};
+
+$app->map($accountMethods, "/account[/]", $account);
+
+$profileMethods = [
+    "GET",
+    "OPTIONS",
+];
+
+$profile = function (
+    Request $request,
+    Response $response)
+    use ($profileMethods): Response
+{
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $profileMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $profileMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $profileRead = $this->get("profileReadEndpoint");
+    if ($request->isGet()) {
+        return $profileRead($container);
+    } else if ($request->isOptions()) {
+        $options = [
+            "GET" => $profileRead->getOptionsObject(),
+        ];
+
+        return $res->withJson($options);
+    }
+};
+
+$app->map($profileMethods, "/profile[/]", $profile);
+
+$packageMethods = [
+    "GET",
+    "POST",
+    "PUT",
+    "DELETE",
+    "OPTIONS",
+];
+
+$package = function (
+    Request $request,
+    Response $response)
+    use ($packageMethods): Response
+{
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $packageMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $packageMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $packageCreate = $this->get("packageCreateEndpoint");
+    $packageRead = $this->get("packageReadEndpoint");
+    $packageUpdate = $this->get("packageUpdateEndpoint");
+    $packageDelete = $this->get("packageDeleteEndpoint");
+    if ($request->isGet()) {
+        return $packageRead($container);
+    } else if ($request->isPost()) {
+        return $packageCreate($container);
+    } else if ($request->isPut()) {
+        return $packageUpdate($container);
+    } else if ($request->isDelete()) {
+        return $packageDelete($container);
+    } else if ($request->isOptions()) {
+        $options = [
+            "GET" => $packageRead->getOptionsObject(),
+            "POST" => $packageCreate->getOptionsObject(),
+            "PUT" => $packageUpdate->getOptionsObject(),
+            "DELETE" => $packageDelete->getOptionsObject(),
+        ];
+
+        return $res->withJson($options);
+    }
+};
+
+$app->map($packageMethods, "/package[/]", $package);
+
+$versionMethods = [
+    "GET",
+    "POST",
+    "DELETE",
+    "OPTIONS",
+];
+
+$version = function (
+    Request $request,
+    Response $response)
+    use ($versionMethods): Response
+{
+    $container = $this;
+
+    $container["request"] = function () use ($request) {
+        return $request;
+    };
+
+    $res = $response
+        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader(
+            "Access-Control-Allow-Methods",
+            implode(",", $versionMethods));
+
+    $container["response"] = function () use ($res) {
+        return $res;
+    };
+
+    $versionCreate = $this->get("versionCreateEndpoint");
+    $versionRead = $this->get("versionReadEndpoint");
+    $versionDelete = $this->get("versionDeleteEndpoint");
+    if ($request->isGet()) {
+        return $versionRead($container);
+    } else if ($request->isPost()) {
+        return $versionCreate($container);
+    } else if ($request->isDelete()) {
+        return $versionDelete($container);
+    } else if ($request->isOptions()) {
+        $options = [
+            "GET" => $versionRead->getOptionsObject(),
+            "POST" => $versionCreate->getOptionsObject(),
+            "DELETE" => $versionDelete->getOptionsObject(),
+        ];
+
+        return $res->withJson($options);
+    }
+};
+
+$app->map($versionMethods, "/version[/]", $version);
 
 $app->run();

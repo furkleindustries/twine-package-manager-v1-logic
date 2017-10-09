@@ -106,13 +106,13 @@ with open(secrets_dir + 'encryptionKey', 'w') as f:
 
 # Create tpmClient entry in logic/OAuth2/clients.
 cmd = ['php', '-r', 'echo base64_encode(random_bytes(128));']
-server_url = os.environ.get('SERVER_URL') or 'http://localhost:8000'
+server_url = os.environ.get('SERVER_URL') + '/' or 'http://localhost:8000/'
 tpmclient_encryption_key = subprocess.check_output(cmd).decode('utf-8')
 entry = {
     'name': 'Twine Package Manager Client (FI)',
     'description': 'A full service TwinePM client by Furkle Industries.',
     # TODO: Get Docker env file variables to register for python.
-    'domain': '{}/client'.format(server_url),
+    'domain': server_url + 'client',
     'redirectPath': 'authorize/',
     'isConfidential': False,
     'secret': tpmclient_encryption_key,
@@ -182,6 +182,6 @@ pathlib.Path(logs_path).mkdir(parents=True, exist_ok=True)
 os.chown(logs_path, uid, gid)
 
 # Make the directory for the template cache.
-template_cache_path = work_dir + 'templates/cache/'
+template_cache_path = work_dir + 'templates/compilation_cache/'
 pathlib.Path(template_cache_path).mkdir(parents=True, exist_ok=True)
 os.chown(template_cache_path, uid, gid)
