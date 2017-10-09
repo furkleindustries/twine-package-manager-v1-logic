@@ -10,7 +10,22 @@ use TwinePM\Endpoints\AccountDeleteEndpoint;
 use TwinePM\Endpoints\AuthorizationCreateEndpoint;
 use TwinePM\Endpoints\AuthorizationHtmlEndpoint;
 use TwinePM\Endpoints\ClientsHtmlEndpoint;
-
+use TwinePM\Endpoints\LoginHtmlEndpoint;
+use TwinePM\Endpoints\LoginCreateEndpoint;
+use TwinePM\Endpoints\LoginDeleteEndpoint;
+use TwinePM\Endpoints\LogoutHtmlEndpoint;
+use TwinePM\Endpoints\PackageCreateEndpoint;
+use TwinePM\Endpoints\PackageReadEndpoint;
+use TwinePM\Endpoints\PackageUpdateEndpoint;
+use TwinePM\Endpoints\PackageDeleteEndpoint;
+use TwinePM\Endpoints\PackageSearchEndpoint;
+use TwinePM\Endpoints\ProfileReadEndpoint;
+use TwinePM\Endpoints\ProfileSearchEndpoint;
+use TwinePM\Endpoints\RootHtmlEndpoint;
+use TwinePM\Endpoints\SearchEndpoint;
+use TwinePM\Endpoints\UnauthorizeHtmlEndpoint;
+use TwinePM\Endpoints\UserOptionsHtmlEndpoint;
+use TwinePM\Endpoints\ValidateEmailEndpoint;
 class EndpointServiceProvider extends DefaultServicesProvider {
     function register(Container $container) {
         $container["accountCreateEndpoint"] = function () {
@@ -29,16 +44,80 @@ class EndpointServiceProvider extends DefaultServicesProvider {
             return new AccountDeleteEndpoint();
         };
 
-        $container["authorizationCreateEndpoint"] = function () {
-            return new AuthorizationCreateEndpoint();
-        };
-
         $container["authorizationHtmlEndpoint"] = function () {
             return new AuthorizationHtmlEndpoint();
         };
 
+        $container["authorizationCreateEndpoint"] = function () {
+            return new AuthorizationCreateEndpoint();
+        };
+
         $container["clientsHtmlEndpoint"] = function () {
             return new ClientsHtmlEndpoint();
+        };
+
+        $container["loginHtmlEndpoint"] = function () {
+            return new LoginHtmlEndpoint();
+        };
+
+        $container["loginCreateEndpoint"] = function () {
+            return new LoginCreateEndpoint();
+        };
+
+        $container["loginDeleteEndpoint"] = function () {
+            return new LoginDeleteEndpoint();
+        };
+
+        $container["logoutHtmlEndpoint"] = function () {
+            return new LogoutHtmlEndpoint();
+        };
+
+        $container["packageCreateEndpoint"] = function () {
+            return new PackageCreateEndpoint();
+        };
+
+        $container["packageReadEndpoint"] = function () {
+            return new PackageReadEndpoint();
+        };
+
+        $container["packageUpdateEndpoint"] = function () {
+            return new PackageUpdateEndpoint();
+        };
+
+        $container["packageDeleteEndpoint"] = function () {
+            return new PackageDeleteEndpoint();
+        };
+
+        $container["packageSearchEndpoint"] = function () {
+            return new PackageSearchEndpoint();
+        };
+
+        $container["profileReadEndpoint"] = function () {
+            return new ProfileReadEndpoint();
+        };
+
+        $container["profileSearchEndpoint"] = function () {
+            return new ProfileSearchEndpoint();
+        };
+
+        $container["rootHtmlEndpoint"] = function () {
+            return new RootHtmlEndpoint();
+        };
+
+        $container["searchEndpoint"] = function () {
+            return new SearchEndpoint();
+        };
+
+        $container["unauthorizeHtmlEndpoint"] = function () {
+            return new UnauthorizeHtmlEndpoint();
+        };
+
+        $container["userOptionsHtmlEndpoint"] = function () {
+            return new UserOptionsHtmlEndpoint();
+        };
+
+        $container["validateEmailEndpoint"] = function () {
+            return new ValidateEmailEndpoint();
         };
     }
 }

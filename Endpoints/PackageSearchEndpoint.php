@@ -4,16 +4,16 @@ namespace TwinePM\Endpoints;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Container;
 use TwinePM\Exceptions\UserRequestFieldInvalidException;
-class PackagesSearchEndpoint extends AbstractEndpoint {
+class PackageSearchEndpoint extends AbstractEndpoint {
     function __invoke(ContainerInterface $container): ResponseInterface {
         $request = $container->get("request");
         $source = $request->getQueryParams();
-        $query = isset($source["query"]) ? $source["query"] : null;
         if (!array_key_exists("query", $source)) {
             $errorCode = "QueryInvalid";
             throw new UserRequestFieldInvalidException($errorCode);
         }
 
+        $query = $source["query"];
         $queryType = "packages";
         $results = $container->get("searchQuery")($queryType, $query);
 
