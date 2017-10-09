@@ -194,7 +194,7 @@ $login = function (Request $request, Response $response): Response {
         $res = $loginCreate($container);
         $serverUrl = $container->get("serverUrl");
         return $res
-            ->withHeader("Access-Control-Allow-Origin", $serverUrl);
+            ->withHeader("Access-Control-Allow-Origin", $serverUrl)
             ->withRedirect("options", 302);
     } else if ($request->isOptions()) {
         $options = [
