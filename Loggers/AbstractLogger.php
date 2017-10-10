@@ -1,24 +1,23 @@
 <?php
 namespace TwinePM\Loggers;
 
-use \TwinePM\Getters;
-use \Monolog\Logger;
-use \Monolog\Handler\HandlerInterface;
-use \Monolog\Handler\StreamHandler;
-use \Monolog\Processor\ProcessorInterface;
-use \Monolog\Formatter\LineFormatter;
+use Monolog\Logger;
+use Monolog\Handler\HandlerInterface;
+use Monolog\Handler\StreamHandler;
+use Monolog\Processor\ProcessorInterface;
+use Monolog\Formatter\LineFormatter;
 abstract class AbstractLogger implements ILogger {
     const TYPE = "not_provided";
     const LEVEL = Logger::ERROR;
     const ID_LENGTH = 6;
-    const FILEPATH = __DIR__ . "/../../logs/log.txt";
+    const FILEPATH = "php://stdout";
 
     protected $client;
     protected $handlers = [];
     protected $processors = [];
     protected $timezone = "UTC";
 
-    public function getLoggerClient(): Logger {
+    function getLoggerClient(): Logger {
         $channel = static::TYPE ? static::TYPE : self::TYPE;
         return new Logger(
             $channel,
@@ -27,15 +26,17 @@ abstract class AbstractLogger implements ILogger {
             $this->getTimezone());
     }
 
-    public function __construct() {
+    function __construct() {
         if (!$this->handlers) {
             $output = "%channel%.%level_name%: %message%";
             $formatter = new LineFormatter($output);
 
             $filepath = static::FILEPATH;
-            $streamHandler = new StreamHandler($filepath, Logger::DEBUG);
-            $streamHandler->setFormatter($formatter);
-            $this->pushHandler($streamHandler);
+            if ($filepath !== self::FILEPATH) {
+                $streamHandler = new StreamHandler($filepath, Logger::DEBUG);
+                $streamHandler->setFormatter($formatter);
+                $this->pushHandler($streamHandler);
+            }
             
             $streamHandler = new StreamHandler("php://stdout", Logger::DEBUG);
             $streamHandler->setFormatter($formatter);
@@ -46,7 +47,7 @@ abstract class AbstractLogger implements ILogger {
         $this->client = $this->getLoggerClient();
     }
 
-    final public static function getLogId(): string {
+    final static function getLogId(): string {
         if (!defined("LOG_ID")) {
             define("LOG_ID", bin2hex(random_bytes(static::ID_LENGTH)));
         }

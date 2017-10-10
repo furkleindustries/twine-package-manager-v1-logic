@@ -111,10 +111,10 @@ $root = function (Request $request, Response $response) {
     };
 
     $res = $response
-        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader("Allow", implode(",", $rootMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
-            implode(",", $versionMethods));
+            implode(",", $rootMethods));
 
     $container["response"] = function () use ($res) {
         return $res;
