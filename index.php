@@ -22,6 +22,7 @@ use TwinePM\OAuth2\Entities\UserEntity;
 
 $app = new App();
 
+/* Fires third and last. */
 $dependencyContainerMiddleware = function (
     Request $req,
     Response $res,
@@ -51,6 +52,7 @@ $dependencyContainerMiddleware = function (
 
 $app->add($dependencyContainerMiddleware);
 
+/* Fires second. */
 $noIframesMiddleware = function (
     Request $req,
     Response $res,
@@ -62,6 +64,7 @@ $noIframesMiddleware = function (
 
 $app->add($noIframesMiddleware);
 
+/* Fires first. Must be performed before any probable exceptions. */
 $loggerMiddleware = function (
     Request $req,
     Response $res,
@@ -267,7 +270,7 @@ $authorization = function (Request $request, Response $response): Response {
         ->withHeader("Allow", implode(",", $authorizationMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
-            implode(",", $versionMethods));
+            implode(",", $authorizationMethods));
 
     $container["response"] = function () use ($res) {
         return $res;
@@ -277,12 +280,12 @@ $authorization = function (Request $request, Response $response): Response {
     $authorizationCreate = $container->get("authorizationCreateEndpoint");
     $authorizationDelete = $container->get("authorizationDeleteEndpoint");
     if ($request->isGet()) {
-        $res = $authorizeHtml($container);
+        $res = $authorizationHtml($container);
         $templateVars = isset($res->templateVars) ? $res->templateVars : [];
-        $filepath = "authorize.html.twig";
+        $filepath = "authorization.html.twig";
         return $this->get("templater")->render($res, $filepath, $templateVars);
     } else if ($request->isPost()) {
-        $res = $authorizeCreate($container);
+        $res = $authorizationCreate($container);
         $server = $this->get("authorizationServer");
 
         /* Redirects to the target client's authorization endpoint. */
@@ -290,18 +293,18 @@ $authorization = function (Request $request, Response $response): Response {
             $res->authRequest,
             $res);
     } else if ($request->isDelete()) {
-        return $authorizeDelete($container);
+        return $authorizationDelete($container);
     } else if ($request->isOptions()) {
         $options = [
-            "POST" => $authorizeCreate->getOptionsObject(),
-            "DELETE" => $authorizeDelete->getOptionsObject(),
+            "POST" => $authorizationCreate->getOptionsObject(),
+            "DELETE" => $authorizationDelete->getOptionsObject(),
         ];
 
         return $res->withJson($options);
     }
 };
 
-$app->map($authorizationMethods, "/authorization[/]", $authorize);
+$app->map($authorizationMethods, "/authorization[/]", $authorization);
 
 $unauthorizeMethods = [
     "GET",
