@@ -27,7 +27,6 @@ $dependencyContainerMiddleware = function (
     Response $res,
     callable $next)
 {
-    $res = $response;
     $settings = [
         "displayErrorDetails" => true,
     ];
