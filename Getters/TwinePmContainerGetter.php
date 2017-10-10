@@ -3,6 +3,7 @@ namespace TwinePM\Getters;
 
 use Defuse\Crypto;
 use Defuse\Crypto\Key;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Slim\Container;
 use TwinePM\ServiceProviders\EndpointServiceProvider;
@@ -25,40 +26,40 @@ class TwinePmContainerGetter {
 
         $container["decrypt"] = function() {
             $key = $this->get("key");
-            return function(string $cipherText) use ($key) {
+            return function (string $cipherText) use ($key) {
                 return Crypto::decrypt($cipherText, $key);
             };
         };
 
-        $container["encrypt"] = function() {
+        $container["encrypt"] = function () {
             $key = $this->get("key");
-            return function(string $plainText) use ($key) {
+            return function (string $plainText) use ($key) {
                 return Crypto::encrypt($plainText, $key);
             };
         };
 
-        $container["generateKey"] = function() {
+        $container["generateKey"] = function () {
             return function() {
                 return Key::createNewRandomKey();
             };
         };
 
-        $container["generateHmac"] = function() {
+        $container["generateHmac"] = function () {
             $key = $this->get("key");
-            return function(string $message) use ($key) {
+            return function (string $message) use ($key) {
                 $algo = "sha256";
                 $keyStr = $key->saveToAsciiSafeString();
                 return hash_hmac($algo, $message, $keyStr);
             };
         };
 
-        $container["environmentMode"] = function() {
+        $container["environmentMode"] = function () {
             $env = getenv("TWINEPM_MODE");
             return $env ? $env : "production";
         };
 
-        $container["makeDsn"] = function() {
-            return function(
+        $container["makeDsn"] = function () {
+            return function (
                 string $driver,
                 string $host,
                 string $port,
