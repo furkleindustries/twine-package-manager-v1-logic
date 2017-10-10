@@ -32,7 +32,8 @@ $dependencyContainerMiddleware = function (
         "displayErrorDetails" => true,
     ];
 
-    $this->container = new TwinePmContainerGetter()($req, $res, $settings);
+    $containerGetter = new TwinePmContainerGetter();
+    $this->container = $containerGetter($req, $res, $settings);
     try {
         return $next($req, $res);
     } catch (ITwinePmException $e) {
