@@ -16,7 +16,6 @@ use TwinePM\Endpoints;
 use TwinePM\Exceptions\ITwinePmException;
 use TwinePM\Getters\TwinePmContainerGetter;
 use TwinePM\Loggers\AccessLogger;
-use TwinePM\Loggers\LoggerRouter;
 use TwinePM\OAuth2\Entities\ClientEntity;
 use TwinePM\OAuth2\Entities\UserEntity;
 
@@ -70,7 +69,7 @@ $loggerMiddleware = function (
     Response $res,
     callable $next)
 {
-    $accessLogger = $this->get("accessLogger");
+    $accessLogger = new AccessLogger();
 
     $bodyParams = $req->getParsedBody() ?? [];
     $logArray = [
