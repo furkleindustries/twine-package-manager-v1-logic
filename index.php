@@ -230,10 +230,10 @@ $logout = function (Request $request, Response $response): Response {
     };
 
     $res = $response
-        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader("Allow", implode(",", $logoutMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
-            implode(",", $versionMethods));
+            implode(",", $logoutMethods));
 
     $container["response"] = function () use ($res) {
         return $res;
@@ -249,6 +249,13 @@ $logout = function (Request $request, Response $response): Response {
 
 $app->map($logoutMethods, "/logout[/]", $logout);
 
+$authorizationMethods = [
+    "GET",
+    "POST",
+    "DELETE",
+    "OPTIONS",
+];
+
 $authorization = function (Request $request, Response $response): Response {
     $container = $this;
 
@@ -257,7 +264,7 @@ $authorization = function (Request $request, Response $response): Response {
     };
 
     $res = $response
-        ->withHeader("Allow", implode(",", $versionMethods))
+        ->withHeader("Allow", implode(",", $authorizationMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $versionMethods));
@@ -287,7 +294,7 @@ $authorization = function (Request $request, Response $response): Response {
     } else if ($request->isOptions()) {
         $options = [
             "POST" => $authorizeCreate->getOptionsObject(),
-            "DELETE" => $accountDelete->getOptionsObject(),
+            "DELETE" => $authorizeDelete->getOptionsObject(),
         ];
 
         return $res->withJson($options);
@@ -308,7 +315,7 @@ $unauthorize = function (Request $request, Response $response): Response {
     };
 
     $res = $response
-        ->withHeader("Allow", implode(",", $clientsMethods))
+        ->withHeader("Allow", implode(",", $unauthorizeMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $unauthorizeMethods));
@@ -327,7 +334,7 @@ $unauthorize = function (Request $request, Response $response): Response {
     }
 };
 
-$app->map($unauthorizeMethods, "/unauthorization[/]", $unauthorize);
+$app->map($unauthorizeMethods, "/unauthorize[/]", $unauthorize);
 
 $clientsMethods = [
     "GET",
