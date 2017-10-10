@@ -18,6 +18,7 @@ use TwinePM\ServiceProviders\ValidatorServiceProvider;
 class TwinePmContainerGetter {
     function __invoke(
         ServerRequestInterface $request,
+        ResponseInterface $response,
         array $settings): Container
     {
         $container = new Container();
@@ -82,6 +83,8 @@ class TwinePmContainerGetter {
         };
 
         $container["request"] = $request;
+
+        $container["response"] = $response;
         
         $container["settings"] = $settings;
         
