@@ -16,13 +16,17 @@ use TwinePM\ServiceProviders\SorterServiceProvider;
 use TwinePM\ServiceProviders\SqlAbstractionServiceProvider;
 use TwinePM\ServiceProviders\TransformerServiceProvider;
 use TwinePM\ServiceProviders\ValidatorServiceProvider;
-class TwinePmContainerGetter {
+class DependencyInjectionContainerGetter {
     function __invoke(
         ServerRequestInterface $request,
         ResponseInterface $response,
-        array $settings): Container
+        array $settings,
+        Container $parent = null): Container
     {
-        $container = new Container();
+        $container = null;
+        if ($parent) {
+            $container = clone $parent;
+        }
 
         $container["decrypt"] = function() {
             $key = $this->get("key");

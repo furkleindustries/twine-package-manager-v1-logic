@@ -22,81 +22,13 @@ use TwinePM\OAuth2\Entities\UserEntity;
 $app = new App();
 
 /* Fires third and last. */
-$dependencyContainerMiddleware = function (
-    Request $req,
-    Response $res,
-    callable $next)
-{
-    $settings = [
-        "displayErrorDetails" => true,
-    ];
-
-    $containerGetter = new TwinePmContainerGetter();
-    $this->container = $containerGetter($req, $res, $settings);
-    try {
-        return $next($req, $res);
-    } catch (ITwinePmException $e) {
-        $response = $response->withHeader(
-            "X-TwinePM-Error-Code",
-            $e->getErrorCode());
-
-        $this->get("loggerRouter")->route($e);
-    } catch (Exception $e) {
-        /* TODO: Add real error handling. */
-        die("Unknown error.");
-    }
-
-    return $res;
-};
-
-$app->add($dependencyContainerMiddleware);
+$app->add(new DependencyContainerMiddleware($app->getContainer()));
 
 /* Fires second. */
-$noIframesMiddleware = function (
-    Request $req,
-    Response $res,
-    callable $next)
-{
-    $noIframesResponse = $res->withHeader("X-Frame-Options", "DENY");
-    return $next($req, $noIframesResponse);
-};
-
-$app->add($noIframesMiddleware);
+$app->add(new NoIFramesMiddleware());
 
 /* Fires first. Must be performed before any probable exceptions. */
-$loggerMiddleware = function (
-    Request $req,
-    Response $res,
-    callable $next)
-{
-    $accessLogger = new AccessLogger();
-
-    $bodyParams = $req->getParsedBody() ?? [];
-    $logArray = [
-        "query" => $req->getQueryParams(),
-        "body" => $bodyParams,
-        "headers" => $req->getHeaders(),
-        "server" => $req->getServerParams(),
-    ];
-
-    unset($logArray["query"]["password"]);
-    unset($logArray["body"]["password"]);
-    unset($logArray["server"]["SERVER_SOFTWARE"]);
-    unset($logArray["server"]["SCRIPT_NAME"]);
-    unset($logArray["server"]["DOCUMENT_ROOT"]);
-
-    /* Deduplicate headers from server. */
-    foreach ($logArray["server"] as $key => $value) {
-        if (array_key_exists($key, $logArray["headers"])) {
-            unset($logArray["server"][$key]);
-        }
-    }
-
-    $accessLogger->log($logArray);
-    return $next($req, $res);
-};
-
-$app->add($loggerMiddleware);
+$app->add(new LoggerMiddleware(new AccessLogger()));
 
 $rootMethods = [
     "GET",
