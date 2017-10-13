@@ -3,7 +3,7 @@ namespace TwinePM\Middleware;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
-class LoggerMiddleware implements IMiddleware {
+class AccessLoggerMiddleware implements IMiddleware {
     private $logger;
 
     function __construct(AbstractLogger $logger) {

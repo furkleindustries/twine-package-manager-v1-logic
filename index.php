@@ -16,6 +16,9 @@ use TwinePM\Endpoints;
 use TwinePM\Exceptions\ITwinePmException;
 use TwinePM\Getters\TwinePmContainerGetter;
 use TwinePM\Loggers\AccessLogger;
+use TwinePM\Middleware\DependencyContainerMiddleware;
+use TwinePM\Middleware\NoIFramesMiddleware;
+use TwinePM\Middleware\LoggerMiddleware;
 use TwinePM\OAuth2\Entities\ClientEntity;
 use TwinePM\OAuth2\Entities\UserEntity;
 
@@ -28,7 +31,7 @@ $app->add(new DependencyContainerMiddleware($app->getContainer()));
 $app->add(new NoIFramesMiddleware());
 
 /* Fires first. Must be performed before any probable exceptions. */
-$app->add(new LoggerMiddleware(new AccessLogger()));
+$app->add(new AccessLoggerMiddleware(new AccessLogger()));
 
 $rootMethods = [
     "GET",
