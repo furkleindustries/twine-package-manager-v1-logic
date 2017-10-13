@@ -18,7 +18,7 @@ use TwinePM\Getters\TwinePmContainerGetter;
 use TwinePM\Loggers\AccessLogger;
 use TwinePM\Middleware\DependencyContainerMiddleware;
 use TwinePM\Middleware\NoIFramesMiddleware;
-use TwinePM\Middleware\LoggerMiddleware;
+use TwinePM\Middleware\AccessLoggerMiddleware;
 use TwinePM\OAuth2\Entities\ClientEntity;
 use TwinePM\OAuth2\Entities\UserEntity;
 
