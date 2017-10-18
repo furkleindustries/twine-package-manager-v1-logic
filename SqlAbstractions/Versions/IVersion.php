@@ -1,8 +1,9 @@
 <?php
 namespace TwinePM\SqlAbstractions\Versions;
 
-use \TwinePM\SqlAbstractions\ISqlAbstraction;
-use \TwinePM\Responses;
+use TwinePM\SqlAbstractions\Accounts\IAccount;
+use TwinePM\SqlAbstractions\ISqlAbstraction;
+use TwinePM\SqlAbstractions\Packages\IPackage;
 interface IVersion extends ISqlAbstraction {
     const DATA_LEVELS = [
         "metadata",
@@ -18,35 +19,35 @@ interface IVersion extends ISqlAbstraction {
         "packageDataLevel" => "metadata",
     ];
 
-    public function getPackage(): Responses\IResponse;
-    public function getOwner(): Responses\IResponse;
+    function getPackage(): IPackage;
 
-    public function getPackageId(): int;
+    function getOwner(): IAccount;
 
-    public function getGlobalVersionId(): ?int;
+    function getPackageId(): int;
 
-    public function getJs(): ?string;
-    public function setJs(?string $js): Responses\IResponse;
+    function getName(): string;
 
-    public function getCss(): ?string;
-    public function setCss(?string $css): Responses\IResponse;
+    function getGlobalVersionId(): ?int;
 
-    public function getDescription(): string;
-    public function setDescription(string $description): Responses\IResponse;
+    function getJs(): ?string;
+    function setJs(?string $js): void;
 
-    public function getHomepage(): string;
-    public function setHomepage(string $homepage): Responses\IResponse;
+    function getCss(): ?string;
+    function setCss(?string $css): void;
 
-    public function getVersion(): string;
-    public function setVersion(string $version): Responses\IResponse;
+    function getDescription(): string;
+    function setDescription(string $description): void;
 
-    public function getTag(): ?string;
-    public function setTag(?string $tag): Responses\IResponse;
+    function getHomepage(): ?string;
+    function setHomepage(?string $homepage): void;
 
-    public function getAuthorId(): int;
+    function getVersion(): string;
+    function setVersion(string $version): void;
 
-    public function getTimeCreated(): ?int;
+    function getTag(): ?string;
+    function setTag(?string $tag): void;
 
-    public function getName(): string;
+    function getAuthorId(): int;
+
+    function getTimeCreated(): ?int;
 }
-?>

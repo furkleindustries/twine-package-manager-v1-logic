@@ -11,11 +11,13 @@ class AccountCreateEndpoint extends AbstractEndpoint {
         /* Throws exception if invalid. */
         $container->get("validateAccountCreationSource")($source);
 
+        $name = $source["name"];
+
         $key = "passwordToHashTransformer";
         $passwordToHashTransformer = $container->get($key);
         $hash = $passwordToHashTransformer($password);
 
-        $db = $container->get("databaseClientWithExceptions");
+        $db = $container->get("diskDatabaseClientWithExceptions");
         $db->setAttribute($errmodeKey, $errmodeValue);
         $db->beginTransaction();
 
@@ -46,13 +48,16 @@ class AccountCreateEndpoint extends AbstractEndpoint {
         ];
 
         $cacheClient = $container->get("cacheClient");
-        $cacheClient->HMSET($requestId, $array);
+        $key = "EmailValidations";
+        $cacheClient->HSETNX($requestId, $array);
 
         $address = $source["email"];
         $title = "Validate TwinePM E-mail";
+        $encryptionTransformer = $container->get("encryptionTransformer");
+        $encryptedRequestId = $encryptionTransformer($requestId);
         $body = "Please follow this link to activate your account:<br>" .
             "<a href='https://furkleindustries.com/twinepm/validateEmail/" .
-            "?id=$id&token=$token'>Activate</a>";
+            "?id=$id&request=$encryptedRequestId'>Activate</a>";
         $sender = "no-reply@furkleindustries.com";
         $container->get("sendMail")($address, $title, $body, $sender);
 

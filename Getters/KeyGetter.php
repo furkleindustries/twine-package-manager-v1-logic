@@ -4,31 +4,45 @@ namespace TwinePM\Getters;
 use Defuse\Crypto\Key;
 use Exception;
 class RequestIdKeyGetter implements IGetter {
-    function __invoke(
-        callable $initKeyFromString,
-        callable $getFromFile,
-        callable $writeToFile,
-        callable $generateKey): Key
-    {
-        $filepath = __DIR__ . "/../crypto/requestIdKey";
-        $contents = null;
-        $loaded = false;
-        try {
-            $contents = $getFromFile($filepath);
-            $loaded = true;
-        } catch (Exception $e) {
-            $key = $generateKey();
+    private $stringToKeyTransformer;
+    private $filePathToFileContentsTransformer;
+    private $writeToFile;
+    private $keyGetter;
+    private $keyBuilder;
 
+    function __construct(
+        callable $stringToKeyTransformer,
+        callable $filePathToFileContentsTransformer,
+        callable $filePersister,
+        callable $keyGetter,
+        callable $keyBuilder)
+    {
+        $this->stringToKeyTransformer = $stringToKeyTransformer;
+        $this->filePathToFileContentsTransformer =
+            $filePathToFileContentsTransformer;
+        $this->filePersister = $filePersister;
+        $this->keyGetter = $keyGetter;
+        $this->keyBuilder = $keyBuilder;
+    }
+
+    function __invoke() {
+        $contents = null;
+        $key = null;
+        try {
+            $contents = $this->filePathToFileContentsTransformer($filepath);
+        } catch (ITwinePmException $e) {
+            $filepath = __DIR__ . "/../crypto/requestIdKey";
+            $key = $this->keyGetter();
             try {
-                $writeToFile($filepath, $key->saveToAsciiSafeString());
+                $this->filePersister($filepath, $key->saveToAsciiSafeString());
             } catch (Exception $e) {
-                /* TODO: add logs here. */
-                return;
+                $errorCode = "KeyPersistenceFailed";
+                throw new PersistenceFailedException($errorCode);
             }
         }
 
-        if ($loaded) {
-            $key = $initKeyFromString($contents);
+        if ($contents) {
+            $key = $this->keyBuilder($contents);
         }
 
         return $key;

@@ -1,21 +1,20 @@
 <?php
 namespace TwinePM\Filters;
 
-use \TwinePM\Responses;
-use \TwinePM\Validators\SearchFilterSourceValidator;
-class MetaphoneLevenshteinFilter implements IFilter {
+class MetaphoneLevenshteinFilter implements ISearchFilter {
     const MAX_METAPHONE_LEVENSHTEIN = 5;
 
-    public static function filter(
-        $value,
-        array $context = null): Responses\IResponse
-    {
-        $validationResponse = SearchFilterSourceValidator::validate($value);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
+    private $validator;
 
-        $query = $value["query"];
+    function __construct(callable $validator) {
+        $this->validator = $validator;
+    }
+
+    function __invoke($value) {
+        /* Throws exception if invalid. */
+        $this->validator($value);
+
+        $query = trim($value["query"]);
         $results = $value["results"];
         $targets = $value["targets"];
 
@@ -50,4 +49,3 @@ class MetaphoneLevenshteinFilter implements IFilter {
         return $success;
     }
 }
-?>

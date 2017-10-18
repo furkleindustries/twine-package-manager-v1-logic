@@ -1,14 +1,14 @@
 <?php
 namespace TwinePM\ServiceProviders;
 
-use Slim\Container;
-use Slim\DefaultServicesProvider;
+use Pimple\Container;
+use Pimple\ServiceProviderInterface;
 use TwinePM\Endpoints\AccountCreateEndpoint;
 use TwinePM\Endpoints\AccountReadEndpoint;
 use TwinePM\Endpoints\AccountUpdateEndpoint;
 use TwinePM\Endpoints\AccountDeleteEndpoint;
 use TwinePM\Endpoints\AuthorizationCreateEndpoint;
-use TwinePM\Endpoints\AuthorizationHtmlEndpoint;
+use TwinePM\Endpoints\AuthorizeHtmlEndpoint;
 use TwinePM\Endpoints\ClientsHtmlEndpoint;
 use TwinePM\Endpoints\LoginHtmlEndpoint;
 use TwinePM\Endpoints\LoginCreateEndpoint;
@@ -26,7 +26,7 @@ use TwinePM\Endpoints\SearchEndpoint;
 use TwinePM\Endpoints\UnauthorizeHtmlEndpoint;
 use TwinePM\Endpoints\UserOptionsHtmlEndpoint;
 use TwinePM\Endpoints\ValidateEmailEndpoint;
-class EndpointServiceProvider extends DefaultServicesProvider {
+class EndpointServiceProvider implements ServiceProviderInterface {
     function register(Container $container) {
         $container["accountCreateEndpoint"] = function () {
             return new AccountUpdateEndpoint();
@@ -44,12 +44,12 @@ class EndpointServiceProvider extends DefaultServicesProvider {
             return new AccountDeleteEndpoint();
         };
 
-        $container["authorizationHtmlEndpoint"] = function () {
-            return new AuthorizationHtmlEndpoint();
-        };
-
         $container["authorizationCreateEndpoint"] = function () {
             return new AuthorizationCreateEndpoint();
+        };
+
+        $container["authorizeHtmlEndpoint"] = function () {
+            return new AuthorizeHtmlEndpoint();
         };
 
         $container["clientsHtmlEndpoint"] = function () {

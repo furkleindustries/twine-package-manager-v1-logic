@@ -4,28 +4,63 @@ namespace TwinePM\Persisters;
 use League\OAuth2\Server\RequestTypes\AuthorizationRequest;
 use Predis\Client;
 class AuthorizationRequestPersister {
-    function persist(
-        string $requestId,
-        string $salt,
+    private $memoryDatabaseClient;
+    private $requestIdGetter;
+    private $saltGetter;
+    private $encryptionTransformer;
+
+    function __construct(
+        Client $memoryDatabaseClient,
+        callable $requestIdGetter,
+        callable $saltGetter,
+        callable $encryptTransformer)
+    {
+        $this->memoryDatabaseClient = $memoryDatabaseClient;
+        $this->requestIdGetter = $requestIdGetter;
+        $this->saltGetter = $saltGetter;
+        $this->encryptionTransformer = $encryptionTransformer;
+    }
+
+    function __invoke(
         string $domain,
         AuthorizationRequest $authRequest,
-        Client $cache,
-        callable $encrypt,
-        callable $generateHmac): void
+        int $maxGenerationAttempts = 5,
+        int $expiryTimeInSeconds = 3600): void
     {
-        if (!$requestId) {
-            $errorCode = "RequestIdInvalid";
-            throw new InvalidArgumentException($errorCode);
-        }
-
-        if (!$salt) {
-            $errorCode = "SaltInvalid";
-            throw new InvalidArgumentException($errorCode);
-        }
-
         if (!$domain) {
             $errorCode = "DomainInvalid";
             throw new InvalidArgumentException($errorCode);
+        }
+
+        $expires = time() + $expiryTimeInSeconds;
+
+        $mdb = $this->memoryDatabaseClient;
+
+        $salt = $this->saltGetter();
+        $sar = serialize($authRequest);
+        $cacheSession = [
+            "salt" => $salt,
+            "serializedAuthenticationRequest" => $sar,
+            "expires" => $expires,
+        ];
+
+        /* Sort so deep-equal objects are serialized identically. */
+        array_multisort($cacheSession);
+
+        $encrypted = $this->encryptionTransformer(json_encode($cacheSession));
+        $requestId = null;
+        $key = "authorizationRequests";
+        for ($ii = 0; $ii < $maxGenerationAttempts; $ii += 1) {
+            $requestId = $this->requestIdGetter();
+            if ($mdb->HSETNX($key, $requestId, $encrypted)) {
+                $requestId = $field;
+                break;
+            }
+        }
+
+        if (!$requestId) {
+            $errorCode = "RequestIdFailed";
+            throw new GenerationFailedException($errorCode);
         }
 
         $cookie = [
@@ -33,44 +68,25 @@ class AuthorizationRequestPersister {
             "salt" => $salt,
         ];
 
+        /* Sort so deep-equal objects are serialized identically. */
         array_multisort($cookie);
 
-        $encryptedCookie = $encrypt(json_encode($cookie));
-        $cookieHmac = $generateHmac($encryptedCookie);
-
-        $sar = serialize($authRequest);
-
-        $cacheSession = [
-            "serializedAuthenticationRequest" => $sar,
-            "salt" => $salt,
-            "cookieHmac" => $cookieHmac,
-        ];
-
-        array_multisort($cacheSession);
-
-        $redis->HMSET($requestId, $cacheSession);
-
         $key = "authorizationRequest";
-        /* Allow cookie to persist for one hour. */
-        $expire = time() + 60 * 60;
+        $value = $this->encryptionTransformer(json_encode($cookie));
         $path = "/authorization";
-        $lh = "localhost";
-        $scheme_lh = "http://" . $lh;
         $result = null;
-        if (substr($domain, 0, strlen($lh)) === $lh or
-            substr($domain, 0, strlen($scheme_lh)) === $scheme_lh)
-        {
+        if (getenv("TWINEPM_MODE") === "dev") {
             $result = setcookie(
                 $key,
                 $value,
-                $expire);
+                $expires);
         } else {
             $secure = true;
             $httpOnly = true;
             $result = setcookie(
                 $key,
                 $value,
-                $expire,
+                $expires,
                 $path,
                 $domain,
                 $secure,
@@ -83,11 +99,7 @@ class AuthorizationRequestPersister {
         }
     }
 
-    function unpersist(
-        string $requestId,
-        string $domain,
-        Client $cache): void
-    {
+    function unpersist(string $requestId, string $domain): void {
         if (!$requestId) {
             $errorCode = "RequestIdInvalid";
             throw new InvalidArgumentException($errorCode);
@@ -98,26 +110,27 @@ class AuthorizationRequestPersister {
             throw new InvalidArgumentException($errorCode);
         }
 
-        $cache->DEL($key);
+        $key = "authorizationRequests";
+        /* Delete the key in the cache server. */
+        $this->memoryDatabaseClient->HDEL($key, $requestId);
 
         $key = "authorizationSession";
         $value = "";
-        $expire = -1;
+        $expires = -1;
         $path = "/authorization";
-        $lh = "localhost";
         $result = null;
-        if (substr($domain, 0, strlen($lh)) === $lh) {
+        if (getenv("TWINEPM_MODE") === "dev") {
             $result = setcookie(
                 $key,
                 $value,
-                $expire);
+                $expires);
         } else {
             $secure = true;
             $httpOnly = true;
             $result = setcookie(
                 $key,
                 $value,
-                $expire,
+                $expires,
                 $path,
                 $domain,
                 $secure,

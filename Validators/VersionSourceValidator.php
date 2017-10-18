@@ -1,94 +1,99 @@
 <?php
 namespace TwinePM\Validators;
 
-use \TwinePM\Responses;
+use TwinePM\Exceptions\ArgumentInvalidException;
+use TwinePM\Exceptions\ServerErrorException;
 class VersionSourceValidator implements IValidator {
-    public static function validate(
-        $value,
-        array $context = null): Responses\IResponse
+    private $idFilter;
+    private $nameValidator;
+
+    function __construct(
+        callable $idFilter,
+        callable $nameValidator)
     {
-        if (isset($value["packageId"])) {
-            $src = [ "id" => $value["packageId"], ];
-            $validationResponse = IdValidator::validate($src);
-            if ($validationResponse->isError()) {
-                return $validationResponse;
+        $this->$idFilter = $idFilter;
+        $this->$nameValidator = $nameValidator;
+    }
+
+    function __invoke($value) {
+        if (array_key_exists("packageId", $value)) {
+            /* Throws exception if invalid. */
+            $this->$idFilter($value["packageId"]);
+        }
+
+        if (array_key_exists("name", $value)) {
+            /* Throws exception if invalid. */
+            $this->$nameValidator($value["name"]);
+        } else {
+            $errorCode = "NameMissing";
+            throw new ArgumentInvalidException($errorCode);
+        }
+
+        if (array_key_exists("version", $value)) {
+            if (gettype($value["version"]) !== "string") {
+                $errorCode = "VersionInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["version"]) {
+                $errorCode = "VersionEmpty";
+                throw new ArgumentInvalidException($errorCode);
             }
+        } else {
+            $errorCode = "VersionMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        $validationResponse = NameValidator::validate($value);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
-
-        if (!array_key_exists("version", $value)) {
-            $errorCode = "VersionSourceValidatorVersionMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!$value["version"] and
-            gettype($value["version"]) !== "string")
+        if (array_key_exists("js", $value) and
+            gettype($value["js"]) !== "string")
         {
-            $errorCode = "VersionSourceValidatorVersionInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "JsInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
-        if (isset($value["js"]) and gettype($value["js"]) !== "string") {
-            $errorCode = "VersionSourceValidatorJsInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (array_key_exists("css", $value) and
+            gettype($value["css"]) !== "string")
+        {
+            $errorCode = "CssInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
-        if (isset($value["css"]) and gettype($value["css"]) !== "string") {
-            $errorCode = "VersionSourceValidatorCssInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        }
-
-        if (isset($value["keywords"])) {
+        if (array_key_exists("keywords", $value)) {
             if (gettype($value["keywords"]) !== "array") {
-                $errorCode = "VersionSourceValidatorKeywordsInvalid";
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
+                $errorCode = "KeywordsInvalid";
+                throw new ServerErrorException($errorCode);
             } else if (!$value["keywords"]) {
-                $errorCode = "VersionSourceValidatorKeywordsEmpty";
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
+                $errorCode = "KeywordsEmpty";
+                throw new ArgumentInvalidException($errorCode);
             }
 
             foreach ($value["keywords"] as $value) {
                 if (gettype($value) !== "string") {
-                    $errorCode = "VersionSourceValidatorKeywordInvalid";
-                    $error = new Responses\ErrorResponse($errorCode);
-                    return $error;
+                    $errorCode = "KeywordInvalid";
+                    throw new ServerErrorException($errorCode);
                 } else if (!$value) {
-                    $errorCode = "VersionSourceValidatorKeywordEmpty";
-                    $error = new Responses\ErrorResponse($errorCode);
-                    return $error;
+                    $errorCode = "KeywordEmpty";
+                    throw new ArgumentInvalidException($errorCode);
                 }
             }
         }
 
-        if (!array_key_exists("destination", $value)) {
-            $errorCode = "VersionSourceValidatorDescriptionMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!$value["description"] or
-            gettype($value["description"]]) !== "string")
-        {
-            $errorCode = "VersionSourceValidatorDescriptionInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (array_key_exists("description", $value)) {
+            if (gettype($value["description"]) !== "string") {
+                $errorCode = "DescriptionInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["description"]) {
+                $errorCode = "DescriptionInvalid";
+                throw new ArgumentInvalidException($errorCode);
+            }
+        } else {
+            $errorCode = "DescriptionMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
         if (isset($value["homepage"]) and
             gettype($value["homepage"]) !== "string")
         {
-            $errorCode = "VersionSourceValidatorHomepageInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "HomepageInvalid";
+            throw new ServerErrorException($errorCode);
         }
-
-        $success = new Responses\Response();
-        return $success;
     }
 }

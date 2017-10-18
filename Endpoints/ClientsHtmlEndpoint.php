@@ -4,7 +4,7 @@ namespace TwinePM\Endpoints;
 use TwinePM\OAuth2\Repositories\ClientRepository;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Container;
-class ClientsReadEndpoint extends AbstractEndpoint {
+class ClientsHtmlEndpoint extends AbstractEndpoint {
     function __invoke(Container $container): ResponseInterface {
         $clientRepo = $container->get("oAuthClientRepository");
 

@@ -6,7 +6,7 @@ use \League\OAuth2\Server\Repositories\ScopeRepositoryInterface;
 use \TwinePM\Getters\OAuth2ScopesGetter;
 use \TwinePM\OAuth2\Entities\ScopeEntity;
 class ScopeRepository implements ScopeRepositoryInterface {
-    const SCOPES = [
+    private $scopes = [
         "readAccount" => [
             "name" => "Read Account",
             "description" => "Get your account details, including your " .
@@ -57,10 +57,14 @@ class ScopeRepository implements ScopeRepositoryInterface {
         ],
     ];
 
-    public function getScopeEntityByIdentifier(
+    function __construct(callable $scopeEntityBuilder) {
+        $this->scopeEntityBuilder = $scopeEntityBuilder;
+    }
+
+    function getScopeEntityByIdentifier(
         $scopeIdentifier): ?ScopeEntity
     {
-        if (!array_key_exists($scopeIdentifier, static::SCOPES)) {
+        if (!array_key_exists($scopeIdentifier, $this->scopes)) {
             return null;
         }
 

@@ -1,8 +1,8 @@
 <?php
 namespace TwinePM\ServiceProviders;
 
-use Slim\ContainerInterface;
-use Slim\DefaultServicesProvider;
+use Pimple\Container;
+use Pimple\ServiceProviderInterface;
 use TwinePM\Loggers\AccessLogger;
 use TwinePM\Loggers\ClientErrorLogger;
 use TwinePM\Loggers\GenericErrorLogger;
@@ -11,8 +11,8 @@ use TwinePM\Loggers\OAuthServerErrorLogger;
 use TwinePM\Loggers\PermissionsErrorLogger;
 use TwinePM\Loggers\ServerErrorLogger;
 use TwinePM\Loggers\SqlErrorLogger;
-class LoggerServiceProvider extends DefaultServicesProvider {
-    function register(ContainerInterface $container) {
+class LoggerServiceProvider implements ServiceProviderInterface {
+    function register(Container $container) {
         $container["accessLogger"] = function () {
             return new AccessLogger();
         };

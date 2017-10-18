@@ -3,10 +3,11 @@ namespace TwinePM\Middleware;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use TwinePM\Loggers\ILogger;
 class AccessLoggerMiddleware implements IMiddleware {
     private $logger;
 
-    function __construct(AbstractLogger $logger) {
+    function __construct(ILogger $logger) {
         $this->logger = $logger;
     }
 
@@ -15,8 +16,6 @@ class AccessLoggerMiddleware implements IMiddleware {
         ResponseInterface $response,
         callable $next): ResponseInterface
     {
-        $accessLogger = new AccessLogger();
-
         $bodyParams = $request->getParsedBody() ?? [];
         $logArray = [
             "query" => $request->getQueryParams(),
@@ -38,7 +37,7 @@ class AccessLoggerMiddleware implements IMiddleware {
             }
         }
 
-        $accessLogger->log($logArray);
+        $this->logger->log($logArray);
 
         return $next($request, $response);
     }

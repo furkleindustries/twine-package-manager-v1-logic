@@ -5,7 +5,7 @@ use Psr\Http\Message\ResponseInterface;
 use Slim\Container;
 use TypeError;
 use TwinePM\DecryptionFailedException;
-class AuthorizePostEndpoint extends AbstractEndpoint {
+class AuthorizationCreateEndpoint extends AbstractEndpoint {
     function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $cookies = $request->getCookieParams();
@@ -16,7 +16,7 @@ class AuthorizePostEndpoint extends AbstractEndpoint {
             $userId = $container->get("idFilter")($user["id"]);
             $userName = $user["userName"];
         } else {
-            $loginPostEndpoint = $container->get("loginPostEndpoint");
+            $loginPostEndpoint = $container->get("loginCreateEndpoint");
             $loginResponse = $loginPostEndpoint($container);
             $persistLoginSession = $container->get("persistLoginSession");
             $userId = $loginResponse->userId;

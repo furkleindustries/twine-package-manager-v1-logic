@@ -1,23 +1,23 @@
 <?php
 namespace TwinePM\OAuth2\Repositories;
 
-use \League\OAuth2\Server\Entities\AccessTokenEntityInterface;
-use \League\OAuth2\Server\Entities\ClientEntityInterface;
-use \League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
-use \League\OAuth2\Server\CryptKey;
-use \TwinePM\OAuth2\Entities\AccessTokenEntity;
-use \TwinePM\Getters\DatabaseGetter;
-use \TwinePM\SqlAbstractions\Authorizations\Authorization;
+use League\OAuth2\Server\Entities\AccessTokenEntityInterface;
+use League\OAuth2\Server\Entities\ClientEntityInterface;
+use League\OAuth2\Server\Repositories\AccessTokenRepositoryInterface;
+use League\OAuth2\Server\CryptKey;
+use TwinePM\OAuth2\Entities\AccessTokenEntity;
+use TwinePM\Getters\DatabaseGetter;
+use TwinePM\SqlAbstractions\Authorizations\Authorization;
 class AccessTokenRepository implements AccessTokenRepositoryInterface {
     private $cryptKey;
     private $database;
 
-    public function __construct(CryptKey $cryptKey, PDO $database = null) {
+    function __construct(CryptKey $cryptKey, PDO $database = null) {
         $this->cryptKey = $cryptKey;
         $this->database = $database ?? DatabaseGetter::get();
     }
 
-    public function persistNewAccessToken(
+    function persistNewAccessToken(
         AccessTokenEntityInterface $accessTokenEntity)
     {
         $jwt = $accessTokenEntity->convertToJWT($this->cryptKey);
@@ -49,15 +49,15 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
         }
     }
 
-    public function revokeAccessToken($tokenId) {
-        // Some logic here to revoke the access token
+    function revokeAccessToken($tokenId) {
+        // TODO: Some logic here to revoke the access token
     }
 
-    public function isAccessTokenRevoked($tokenId) {
+    function isAccessTokenRevoked($tokenId) {
         return false; // Access token hasn't been revoked
     }
 
-    public function getNewToken(
+    function getNewToken(
         ClientEntityInterface $clientEntity,
         array $scopes,
         $userIdentifier = null)
@@ -71,6 +71,4 @@ class AccessTokenRepository implements AccessTokenRepositoryInterface {
         $accessToken->setUserIdentifier($userIdentifier);
         return $accessToken;
     }
-
-    public function 
 }

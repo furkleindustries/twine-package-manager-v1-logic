@@ -3,7 +3,7 @@ namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
 use Slim\Container;
-class ServerUserOptionsGetEndpoint extends AbstractEndpoint {
+class UserOptionsHtmlEndpoint extends AbstractEndpoint {
     function __invoke(Container $container): ResponseInterface {
         $currentUser = $container->get("loggedInUser");
         $templatingAuths = [];
@@ -25,5 +25,9 @@ class ServerUserOptionsGetEndpoint extends AbstractEndpoint {
         ];
 
         return $response;
+    }
+
+    function getOptionsObject(): array {
+        return [];
     }
 }

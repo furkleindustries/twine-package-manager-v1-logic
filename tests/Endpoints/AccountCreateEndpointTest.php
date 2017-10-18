@@ -14,6 +14,7 @@ class AccountCreateEndpointTest extends TestCase {
             ->getMockBuilder(Container::class)
             ->getMock();
 
-        $this->assertTrue($stub($containerMock) instanceof ResponseInterface);
+        $result = $stub->__invoke($containerMock);
+        $this->assertTrue($result instanceof ResponseInterface);
     }
 }

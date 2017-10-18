@@ -1,42 +1,36 @@
 <?php
 namespace TwinePM\Filters;
 
-use \TwinePM\Responses;
-use \TwinePM\Validators\SearchFilterSourceValidator;
+use TwinePM\Validators\SearchFilterSourceValidator;
 class ContainsFilter implements ISearchFilter {
-    public static function filter(
-        $value,
-        array $context = null): Responses\IResponse
-    {
-        $validationResponse = SearchFilterSourceValidator::validate($value);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
+    private $validator;
 
-        $query = $value["query"];
+    function __construct(callable $validator) {
+        $this->validator = $validator;
+    }
+
+    function __invoke($value) {
+        /* Throws exception if invalid. */
+        $this->validator($value);
+
+        /* Trim whitespace from beginning and end of query. */
+        $query = trim($value["query"]);
         $results = $value["results"];
         $targets = $value["targets"];
 
         if (in_array(static::SEARCH_GLOBAL_SELECTORS, $query)) {
-            $success = new Responses\Response();
-            $success->filtered = $results;
-            return $success;
+            return $results;
         }
 
         $func = function ($row) use ($query, $targets) {
             foreach ($targets as $value) {
                 $pos = strpos(strtolower($row[$value]), strtolower($query));
-                if (isset($row[$value]) and $pos !== false) {
+                return isset($row[$value]) and $pos !== false) {
                     return true;
                 }
             }
         }
 
-        $filtered = array_filter($results, $func);
-
-        $success = new Responses\Response();
-        $success->filtered = $filtered;
-        return $success;
+        return array_filter($results, $func);
     }
 }
-?>

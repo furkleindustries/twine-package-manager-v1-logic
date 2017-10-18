@@ -4,18 +4,19 @@ namespace TwinePM\Endpoints;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Container;
 use TwinePM\Exceptions\UserRequestFieldInvalidException;
-class UnauthorizePostEndpoint extends AbstractEndpoint {
+class AuthorizationDeleteEndpoint extends AbstractEndpoint {
     function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $source = $request->getParsedBody();
         $authorization = null;
         $sqlAbstractionType = "authorization";
-        if (array_key_exists("globalAuthorizationId"], $source)) {
+        if (array_key_exists("globalAuthorizationId", $source)) {
             $globalAuthorizationId = $source["globalAuthorizationId"];
+            /* Throws exception if invalid. */
             $id = $container->get("idFilter")($globalAuthorizationId);
             $key = "getAbstractionFromPrimaryKey";
-            $getFromPrimaryKey = $container->get();
-            $authorization = $getFromSource($sqlAbstractionType, $id);
+            $getFromPrimaryKey = $container->get($key);
+            $authorization = $getFromPrimaryKey($sqlAbstractionType, $id);
         } else if (isset($source["oAuthToken"])) {
             $getFromToken = $container->get("getAbstractionFromToken");
             $authorization = $getFromToken($source["oAuthToken"]);
@@ -25,7 +26,5 @@ class UnauthorizePostEndpoint extends AbstractEndpoint {
         }
 
         $authorization->deleteFromDatabase();
-
-
     }
 }

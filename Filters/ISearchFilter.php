@@ -6,4 +6,6 @@ interface ISearchFilter extends IFilter {
         "",
         "*"
     ];
+
+    function __construct(callable $validator);
 } 

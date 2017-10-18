@@ -1,21 +1,20 @@
 <?php
 namespace TwinePM\Filters;
 
-use \TwinePM\Responses;
-use \TwinePM\Validators\SearchFilterSourceValidator;
-class SimilarityFilter implements IFilter {
+class SimilarityFilter implements ISearchFilter {
     const MIN_SIMILARITY = 45;
 
-    public static function filter(
-        $value,
-        array $context = null): Responses\IResponse
-    {
-        $validationResponse = SearchFilterSourceValidator::validate($value);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
+    private $validator;
 
-        $query = $value["query"];
+    function __construct(callable $validator) {
+        $this->validator = $validator;
+    }
+
+    function __invoke($value) {
+        /* Throws exception if invalid. */
+        $this->validator($value);
+
+        $query = trim($value["query"]);
         $results = $value["results"];
         $targets = $value["targets"];
 
@@ -37,11 +36,6 @@ class SimilarityFilter implements IFilter {
             return false;
         };
 
-        $filtered = array_filter($results, $func);
-
-        $success = new Responses\Response();
-        $success->filtered = $filtered;
-        return $success;
+        return array_filter($results, $func);
     }
 }
-?>

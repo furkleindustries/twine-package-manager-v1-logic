@@ -1,58 +1,51 @@
 <?php
 namespace TwinePM\Transformers;
 
-use \TwinePM\Responses;
-use \TwinePM\OAuth2\Repositories\ClientRepository;
-use \TwinePM\OAuth2\Repositories\ScopeRepository;
-use \DateTime;
+use TwinePM\Exceptions\ArgumentInvalidException;
+use TwinePM\SqlAbstractions\Authorizations\IAuthorization;
+use mixed;
 class AuthorizationToTemplatingArrayTransformer implements ITransformer {
-    public static function transform(
-        $value,
-        array $context = null): Responses\IResponse
+    private $clients;
+    private $scopes;
+    private $dateTimeOption;
+    private $dateTimeTransformer;
+
+    function __construct(
+        array $clients,
+        array $scopes,
+        mixed $dateTimeOption,
+        callable $dateTimeTransformer)
     {
-        if (gettype($value) !== "array") {
-            $errorCode =
-                "AuthorizationToTemplatingArrayTransformerValueInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        $this->clients = $clients;
+        $this->scopes = $scopes;
+        $this->dateTimeOption = $dateTimeOption;
+        $this->dateTimeTransformer = $dateTimeTransformer;
+    }
+
+    function __invoke($value) {
+        if (!($value instanceof IAuthorization)) {
+            $errorCode = "ValueInvalid";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        $authorizations = array_map(function ($auth) {
-            $clientId = $auth->getClient();
-            $clients = (new ClientRepository())->getClients();
-            $clientArray = isset($clients[$clientId]) ?
-                $clients[$clientId] : null;
+        $clientId = $value->getClient();
+        $clientName = isset($this->clients[$clientId]) ?
+            $this->clients[$clientId]["name"] : "CLIENT_NAME_ERROR";
 
-            $clientName = null;
-            if ($clientArray) {
-                $clientName = $clientArray["name"];
-            } else {
-                $clientName = "CLIENT_NAME_ERROR";
-            }
+        $dateTimeOption = $this->dateTimeOption;
+        $timeCreated = $value->getTimeCreated();
+        $dateTime = $this->$dateTimeTransformer($dateTimeOption, $timeCreated);
+        $scopes = array_map(function ($scopeId) {
+            return array_key_exists($scopeId, $this->scopes) ?
+                $this->scopes[$scopeId]["name"] : "SCOPE_ERROR";
+        }, $value->getScopes());
 
-            $time = date(DateTime::COOKIE, $auth->getTimeCreated());
-            $scopes = array_map(function ($scope) {
-                if (array_key_exists($scope, ScopeRepository::SCOPES)) {
-                    return ScopeRepository::SCOPES[$scope]["name"];
-                }
-
-                return "SCOPE_ERROR";
-            }, $auth->getScopes());
-
-            $scopes = implode(", ", $scopes);
-            $templatedAuth = [
-                "globalAuthorizationId" => $auth->getGlobalAuthorizationId(),
-                "clientName" => $clientName,
-                "time" => $time,
-                "scopes" => $scopes,
-                "ip" => $auth->getIp(),
-            ];
-
-            return $templatedAuth;
-        }, $value);
-
-        $success = new Responses\Response();
-        $success->transformed = $authorizations;
-        return $success;
+        return [
+            "globalAuthorizationId" => $value->getGlobalAuthorizationId(),
+            "clientName" => $clientName,
+            "dateTime" => $dateTime,
+            "scopes" => implode(", ", $scopes),
+            "ip" => $value->getIp(),
+        ];
     }
 }

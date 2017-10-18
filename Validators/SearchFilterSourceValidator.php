@@ -1,59 +1,42 @@
 <?php
 namespace TwinePM\Validators;
 
-use \TwinePM\Responses;
-use \TwinePM\Errors\ErrorInfo;
-use \PDO;
+use TwinePM\Exceptions\ArgumentInvalidException;
+use TwinePM\Exceptions\ServerErrorException;
 class SearchFilterSourceValidator implements IValidator {
-    public static function validate(
-        $value,
-        array $context = null): Responses\IResponse
-    {
-        $value = $source;
-
-        $query = isset($source["query"]) ? $source["query"] : null;
-        if ($query === null) {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_QUERY_MISSING;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (gettype($query) !== "string") {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_QUERY_INVALID;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+    function __invoke($value) {
+        if (array_key_exists("query", $value)) {
+            if (gettype($value["query"]) !== "string") {
+                $errorCode = "QueryInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["query"]) {
+                $errorCode = "QueryEmpty";
+                throw new ArgumentInvalidException($errorCode);
+            }
+        } else {
+            $errorCode = "QueryMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        $results = isset($source["results"]) ? $source["results"] : null;
-        if ($query === null) {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_RESULTS_MISSING;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (gettype($targets) !== "array") {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_RESULTS_INVALID;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!$targets) {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_RESULTS_EMPTY;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (!array_key_exists("results", $value)) {
+            $errorCode = "ResultsMissing";
+            throw new ArgumentInvalidException($errorCode);
+        } else if (gettype($value["results"]) !== "array") {
+            $errorCode = "ResultsInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
-        $targets = isset($source["targets"]) ? $source["targets"] : null;
-        if ($targets === null) {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_TARGETS_MISSING;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (gettype($targets) !== "array") {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_TARGETS_INVALID;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!$targets) {
-            $errorCode = ErrorInfo::SEARCH_FILTER_SOURCE_VALIDATOR_TARGETS_EMPTY;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (array_key_exists("targets", $value)) {
+            if (gettype($value["targets"]) !== "array") {
+                $errorCode = "TargetsInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["targets"]) {
+                $errorCode = "TargetsEmpty";
+                throw new ArgumentInvalidException($errorCode);
+            }
+        } else {
+            $errorCode = "TargetsMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
-
-        $status = Responses\Response::HTTP_SUCCESS;
-        $success = new Responses\Response($status);
-        return $success;
     }
 }

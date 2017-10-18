@@ -1,58 +1,44 @@
 <?php
 namespace TwinePM\Validators;
 
-use \TwinePM\Responses;
-use \PDO;
+use TwinePM\Exceptions\ArgumentInvalidException;
+use TwinePM\Exceptions\PermissionDeniedException;
+use TwinePM\Exceptions\UserRequestFieldInvalidException;
 class PasswordAuthenticationValidator implements IValidator {
-    public static function validate(
-        $value,
-        array $context = null): Responses\IResponse
-    {
-        $value = $source;
+    private $passwordAuthenticator;
 
-        $password = isset($source["password"]) ? $source["password"] : null;
-        if (array_key_exists("password", $source)) {
-            if (gettype($password) !== "string") {
-                $errorCode = ErrorInfo::PASSWORD_AUTHENTICATION_VALIDATOR_PASSWORD_INVALID;
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
-            } else if (!$password) {
-                $errorCode = ErrorInfo::PASSWORD_AUTHENTICATION_VALIDATOR_PASSWORD_EMPTY;
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
+    function __construct(callable $passwordAuthenticator) {
+        $this->$passwordAuthenticator = $passwordAuthenticator;
+    }
+
+    function __invoke($value) {
+        if (!array_key_exists("password", $value)) {
+            if (gettype($value["password"]) !== "string") {
+                $errorCode = "PasswordInvalid";
+                throw new ArgumentInvalidException($errorCode);
+            } else if (!$value["password"]) {
+                $errorCode = "PasswordEmpty";
+                throw new UserRequestFieldInvalidException($errorCode);
             }
         } else {
-            $errorCode = ErrorInfo::PASSWORD_AUTHENTICATION_VALIDATOR_PERMISSION_DENIED;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "PasswordMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        $hash = isset($source["hash"]) ? $source["hash"] : null;
-        if (array_key_exists("hash", $source)) {
-            if (gettype($hash) !== "string") {
-                $errorCode = ErrorInfo::PASSWORD_AUTHENTICATION_VALIDATOR_PASSWORD_INVALID;
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
-            } else if (!$hash) {
-                $errorCode = ErrorInfo::PASSWORD_AUTHENTICATION_VALIDATOR_PASSWORD_EMPTY;
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
-            }
+        if (array_key_exists("hash", $value) and
+            (!$value["hash"] or gettype($value["hash"]) !== "string"))
+        {
+            $errorCode = "HashInvalid";
+            throw new ArgumentInvalidException($errorCode);
         } else {
-            $errorCode = ErrorInfo::PASSWORD_AUTHENTICATION_VALIDATOR_PERMISSION_DENIED;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "HashMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        $valid = password_verify($password, $hash);
-        if (!$valid) {
-            $errorCode = ErrorInfo::PASSWORD_AUTHENTICATION_VALIDATOR_PERMISSION_DENIED;
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        $pass = $value["password"];
+        $hash = $value["hash"];
+        if (!$this->$passwordAuthenticator($pass, $hash)) {
+            throw new PermissionDeniedException();
         }
-
-        $status = Responses\Response::HTTP_SUCCESS;
-        $success = new Responses\Response($status);
-        return $success;
     }
 }

@@ -1,18 +1,17 @@
 <?php
 namespace TwinePM\SqlAbstractions\Authorizations;
 
-use \TwinePM\SqlAbstractions\AbstractSqlAbstraction;
-use \TwinePM\Responses;
-use \TwinePM\Getters;
-use \TwinePM\Validators;
-use \TwinePM\Filters;
-use \TwinePM\Transformers;
-use \TwinePM\SqlAbstractions\Credentials;
-use \TwinePM\SqlAbstractions\Accounts;
-use \TwinePM\OAuth2\Repositories\ClientRepository;
-use \TwinePM\OAuth2\Entities\ClientEntity;
-use \Lcobucci\JWT\Parser;
-use \Lcobucci\JWT\Parsing;
+use TwinePM\SqlAbstractions\AbstractSqlAbstraction;
+use TwinePM\Getters;
+use TwinePM\Validators;
+use TwinePM\Filters;
+use TwinePM\Transformers;
+use TwinePM\SqlAbstractions\Credentials;
+use TwinePM\SqlAbstractions\Accounts;
+use TwinePM\OAuth2\Repositories\ClientRepository;
+use TwinePM\OAuth2\Entities\ClientEntity;
+use Lcobucci\JWT\Parser;
+use Lcobucci\JWT\Parsing;
 use PDO;
 use Exception;
 class Authorization extends AbstractSqlAbstraction implements IAuthorization {
@@ -25,7 +24,7 @@ class Authorization extends AbstractSqlAbstraction implements IAuthorization {
     private $errorInfo;
     private $errorData;
 
-    public static function getFromPrimaryKey(
+    static function getFromPrimaryKey(
         $value,
         PDO $database): Authorization
     {
@@ -175,24 +174,24 @@ class Authorization extends AbstractSqlAbstraction implements IAuthorization {
     }
 
     /* Public get, private set. */
-    public function __get(string $propName) {
+    function __get(string $propName) {
         return isset($this->{$propName}) ? $this->{$propName} : null;
     }
 
-    public function getCredential(): Responses\IResponse {
+    function getCredential(): Responses\IResponse {
         $src = [ "id" => $this->userId, ];
         $db = $this->database;
         $credentialResponse = Credentials\Credential::get($src, $db);
         return $credentialResponse;
     }
 
-    public function getAccount(): Responses\IResponse {
+    function getAccount(): Responses\IResponse {
         $src = [ "id" => $this->userId, ];
         $accountResponse = Accounts\Account::get($src, $this->database);
         return $accountResponse;
     }
 
-    public function getClientObject(): ?array {
+    function getClientObject(): ?array {
         $clients = (new ClientRepository())->getClients();
         if (array_key_exists($this->client, $clients)) {
             return null;
@@ -206,7 +205,7 @@ class Authorization extends AbstractSqlAbstraction implements IAuthorization {
         return $client;
     }
 
-    public function updateFromDatabase(): Responses\IResponse {
+    function updateFromDatabase(): Responses\IResponse {
         if (!isset($this->globalAuthorizationId)) {
             $errorCode =
                 "AuthorizationUpdateFromDatabaseGlobalAuthorizationIdMissing";
@@ -233,7 +232,7 @@ class Authorization extends AbstractSqlAbstraction implements IAuthorization {
         return $success;
     }
 
-    public function deleteFromDatabase(): Responses\IResponse {
+    function deleteFromDatabase(): Responses\IResponse {
         if (!isset($this->globalAuthorizationId)) {
             $errorCode =
                 "AuthorizationDeleteFromDatabaseGlobalAuthorizationIdMissing";
@@ -271,7 +270,7 @@ class Authorization extends AbstractSqlAbstraction implements IAuthorization {
         return $success;
     }
 
-    public function serializeToDatabase(): Responses\IResponse {
+    function serializeToDatabase(): Responses\IResponse {
         $db = $this->database;
         $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
@@ -306,7 +305,7 @@ class Authorization extends AbstractSqlAbstraction implements IAuthorization {
         return $success;
     }
 
-    public function isInDatabase(): bool {
+    function isInDatabase(): bool {
         if (!$this->globalAuthorizationId) {
             return false;
         }
@@ -335,37 +334,37 @@ class Authorization extends AbstractSqlAbstraction implements IAuthorization {
         return $fetch[0];
     }
 
-    public function getGlobalAuthorizationId(): ?int {
+    function getGlobalAuthorizationId(): ?int {
         return $this->globalAuthorizationId;
     }
 
-    public function getUserId(): int {
+    function getUserId(): int {
         return $this->userId;
     }
 
-    public function getClient(): string {
+    function getClient(): string {
         return $this->client;
     }
 
-    public function getScopes(): array {
+    function getScopes(): array {
         return $this->scopes;
     }
 
-    public function getIp(): string {
+    function getIp(): string {
         return $this->ip;
     }
 
-    public function getOAuthToken(): string {
+    function getOAuthToken(): string {
         return $this->oAuthToken;
     }
 
-    public function getDecryptedOAuthToken(): JWT {
+    function getDecryptedOAuthToken(): JWT {
         $decoder = new Parsing\Decoder();
         $parser = new Parser($decoder);
         $jwt = $parser->parse($this->getOAuthToken());
     }
 
-    public function getTimeCreated(): ?int {
+    function getTimeCreated(): ?int {
         return $this->timeCreated;
     }
 }

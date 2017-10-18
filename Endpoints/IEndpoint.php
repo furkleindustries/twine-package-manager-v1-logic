@@ -2,7 +2,7 @@
 namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
-use Slim\ContainerInterface;
+use Slim\Container;
 interface IEndpoint {
     function __invoke(Container $container): ResponseInterface;
 

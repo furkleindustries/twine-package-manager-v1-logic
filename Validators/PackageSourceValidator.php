@@ -1,122 +1,124 @@
 <?php
 namespace TwinePM\Validators;
 
-use \TwinePM\Responses;
-use \TwinePM\Packages\Package;
-use \PDO;
+use TwinePM\Exceptions\ArgumentInvalidException;
+use TwinePM\Exceptions\ServerErrorException;
 class PackageSourceValidator implements IValidator {
-    public static function validate(
-        $value,
-        array $context = null): Responses\IResponse
+    private $packageTypes;
+    private $idFilter;
+    private $nameValidator;
+
+    function __construct(
+        array $packageTypes,
+        callable $idFilter,
+        callable $nameValidator)
     {
-        if (isset($value["id"])) {
-            $validationResponse = IdValidator::validate($value["id"]);
-            if ($validationResponse->isError()) {
-                return $validationResponse;
+        $this->$packageTypes = $packageTypes;
+        $this->$idFilter = $idFilter;
+        $this->$nameValidator = $nameValidator;
+    }
+
+    function __invoke($value) {
+        if (array_key_exists("id", $value)) {
+            /* Throws exception if invalid. */
+            $this->$idFilter($value["id"]);
+        }
+
+        if (array_key_exists("name", $value)) {
+            /* Throws exception if invalid. */
+            $this->$nameValidator($value["name"]);
+        } else {
+            $errorCode = "NameMissing";
+            throw new ArgumentInvalidException($errorCode);
+        }
+
+        if (array_key_exists("authorId", $value)) {
+            /* Throws exception if invalid. */
+            $this->$idFilter($value["authorId"]);
+        } else {
+            $errorCode = "AuthorIdMissing";
+            throw new ArgumentInvalidException($errorCode);
+        }
+
+        if (array_key_exists("ownerId", $value)) {
+            /* Throws exception if invalid. */
+            $this->$idFilter($value["ownerId"]);
+        } else {
+            $errorCode = "OwnerIdMissing";
+            throw new ArgumentInvalidException($errorCode);
+        }
+
+        if (array_key_exists("description", $value)) {
+            if (gettype($value["description"]) !== "string") {
+                $errorCode = "DescriptionInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["description"]) {
+                $errorCode = "DescriptionEmpty";
+                throw new ArgumentInvalidException($errorCode);
             }
+        } else {
+            $errorCode = "DescriptionMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        if (!array_key_exists("name", $value)) {
-            $errorCode = "PackageSourceValidatorNameMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        }
-
-        $validationResponse = NameValidator::validate($value["name"]);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
-
-        if (!array_key_exists("authorId", $value)) {
-            $errorCode = "PackageSourceValidatorAuthorIdMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        }
-
-        $validationResponse = IdValidator::validate($value["authorId"]);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
-
-        if (!array_key_exists("ownerId", $value)) {
-            $errorCode = "PackageSourceValidatorOwnerIdMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        }
-
-        $validationResponse = IdValidator::validate($value["ownerId"]);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
-
-        if (!array_key_exists("description", $value)) {
-            $errorCode = "PackageSourceValidatorDescriptionMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!$value["description"] or
-            gettype($value["description"]) !== "string")
-        {
-            $errorCode = "PackageSourceValidatorDescriptionInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        }
-
-        $type = isset($value["type"]) ? $value["type"] : null;
         $yesStrict = true;
-        if (!isset($value["type"])) {
-            $errorCode = "PackageSourceValidatorTypeMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!in_array($type, Package::TYPES, $yesStrict)) {
-            $errorCode = "PackageSourceValidatorTypeInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (array_key_exists("type", $value)) {
+            if (gettype($value["type"]) !== "string") {
+                $errorCode = "TypeInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["type"] or
+                !in_array($value["type"], $this->packageTypes, $yesStrict))
+            {
+                $errorCode = "TypeInvalid";
+                throw new ArgumentInvalidException($errorCode);
+            }
+        } else {
+            $errorCode = "TypeMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        $currentVersion = isset($value["currentVersion"]) ?
-            $value["currentVersion"] : null;
-        if (isset($value["currentVersion"]) and
-            (!$currentVersion or gettype($currentVersion) !== "string"))
+        if (array_key_exists("currentVersion", $value)) {
+            if (gettype($value["currentVersion"]) !== "string") {
+                $errorCode = "CurrentVersionInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["currentVersion"]) {
+                $errorCode = "CurrentVersionEmpty";
+                throw new ArgumentInvalidException($errorCode);
+            }
+        } else {
+            $errorCode = "CurrentVersionMissing";
+            throw new ArgumentInvalidException($errorCode);
+        }
+
+        if (array_key_exists("timeCreated", $value) and
+            gettype($value["timeCreated"]) !== "integer")
         {
-            $errorCode = "PackageSourceValidatorVersionInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "TimeCreatedInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
-        $timeCreated = isset($value["timeCreated"]) ?
-            $value["timeCreated"] : null;
-        if (isset($value["timeCreated"]) and
-            gettype($timeCreated) !== "integer")
-        {
-            $errorCode = "PackageSourceValidatorTimeCreatedInvalid";
-            $error = new Responses\ErrorResponse($errorCode, $errorData);
-            return $error;
-        }
-
-        $keywords = isset($value["keywords"]) ? $value["keywords"] : null;
-        if (isset($value["keywords"])) {
-            if (gettype($keywords) !== "array") {
-                $errorCode = "PackageSourceValidatorKeywordsInvalid";
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
+        if (array_key_exists("keywords", $value)) {
+            if (gettype($value["keywords"]) !== "array") {
+                $errorCode = "KeywordsInvalid";
+                throw new ServerErrorException($errorCode);
             }
 
-            foreach ($keywords as $value) {
-                if (!$value or gettype($value) !== "string") {
-                    $errorCode = "PackageSourceValidatorKeywordInvalid";
-                    $error = new Responses\ErrorResponse($errorCode);
-                    return $error;
+            foreach ($value["keywords"] as $keyword) {
+                if (gettype($keyword) !== "string") {
+                    $errorCode = "KeywordInvalid";
+                    throw new ArgumentInvalidException($errorCode);
+                } else if (!$keyword) {
+                    $errorCode = "KeywordEmpty";
+                    throw new ArgumentInvalidException($errorCode);
                 }
             }
         }
 
-        if (isset($value["tag"]) and gettype($value["tag"]) !== "string") {
-            $errorCode = "PackageSourceValidatorTagInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (array_key_exists("tag", $value) and
+            gettype($value["tag"]) !== "string")
+        {
+            $errorCode = "TagInvalid";
+            throw new ServerErrorException($errorCode);
         }
-
-        $success = new Responses\Response($status);
-        return $success;
     }
 }

@@ -14,21 +14,49 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use TwinePM\Endpoints;
 use TwinePM\Exceptions\ITwinePmException;
-use TwinePM\Getters\TwinePmContainerGetter;
+use TwinePM\Getters\AppSettingsGetter;
 use TwinePM\Loggers\AccessLogger;
 use TwinePM\Middleware\DependencyContainerMiddleware;
-use TwinePM\Middleware\NoIFramesMiddleware;
+use TwinePM\Middleware\ResponseHeaderMiddleware;
 use TwinePM\Middleware\AccessLoggerMiddleware;
 use TwinePM\OAuth2\Entities\ClientEntity;
 use TwinePM\OAuth2\Entities\UserEntity;
+use TwinePM\ServiceProviders\EndpointServiceProvider;
+use TwinePM\ServiceProviders\FilterServiceProvider;
+use TwinePM\ServiceProviders\GetterServiceProvider;
+use TwinePM\ServiceProviders\LoggerServiceProvider;
+use TwinePM\ServiceProviders\MiscellaneousServiceProvider;
+use TwinePM\ServiceProviders\PersisterServiceProvider;
+use TwinePM\ServiceProviders\SearchServiceProvider;
+use TwinePM\ServiceProviders\SorterServiceProvider;
+use TwinePM\ServiceProviders\SqlAbstractionServiceProvider;
+use TwinePM\ServiceProviders\TransformerServiceProvider;
+use TwinePM\ServiceProviders\ValidatorServiceProvider;
 
-$app = new App();
+$appSettingsGetter = new AppSettingsGetter();
+$initialContainer = [ "settings" => $appSettingsGetter(), ];
+$app = new App($initialContainer);
+
+$container = $app->getContainer();
+$serviceProviders = [
+    new EndpointServiceProvider(),
+    new FilterServiceProvider(),
+    new GetterServiceProvider(),
+    new LoggerServiceProvider(),
+    new MiscellaneousServiceProvider(),
+    new PersisterServiceProvider(),
+    new SearchServiceProvider(),
+    new SorterServiceProvider(),
+    new SqlAbstractionServiceProvider(),
+    new TransformerServiceProvider(),
+    new ValidatorServiceProvider(),
+];
 
 /* Fires third and last. */
-$app->add(new DependencyContainerMiddleware($app->getContainer()));
+$app->add(new ServiceProviderMiddleware($container, $serviceProviders));
 
 /* Fires second. */
-$app->add(new NoIFramesMiddleware());
+$app->add(new ResponseHeaderMiddleware());
 
 /* Fires first. Must be performed before any probable exceptions. */
 $app->add(new AccessLoggerMiddleware(new AccessLogger()));
@@ -39,27 +67,20 @@ $rootMethods = [
 
 $root = function (Request $request, Response $response) {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $rootMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $rootMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $rootHtml = $container->get("rootHtmlEndpoint");
     if ($request->isGet()) {
         $res = $rootHtml($container);
         $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "index.html.twig";
-        return $this->get("templater")->render($res, $filepath, $templateVars);
+        return $container
+            ->get("templater")
+            ->render($res, $filepath, $templateVars);
     }
 };
 
@@ -72,26 +93,20 @@ $createAccountMethods = [
 $createAccount = function(Request $request, Response $response) {
     $container = $this;
 
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $versionMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $versionMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $createAccountHtml = $container->get("createAccountHtmlEndpoint");
     if ($request->isGet()) {
         $res = $createAccountHtml($container);
         $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "createAccount.html.twig";
-        return $this->get("templater")->render($res, $filepath, $templateVars);
+        return $container
+            ->get("templater")
+            ->render($res, $filepath, $templateVars);
     }
 };
 
@@ -106,20 +121,11 @@ $loginMethods = [
 
 $login = function (Request $request, Response $response): Response {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $versionMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $versionMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $loginHtml = $container->get("loginHtmlEndpoint");
     $loginCreate = $container->get("loginCreateEndpoint");
@@ -137,12 +143,9 @@ $login = function (Request $request, Response $response): Response {
             ->withRedirect("/options", 302);
     } else if ($request->isDelete()) {
         $res = $loginDelete($container);
-        $res = $this->get("processTpmResponse")($tpmResponse, $response);
-        if ($res->getHeader("X-TwinePM-Error-Code")) {
-            return $res;
-        }
-
-        return $res->withRedirect("/", 302);
+        return $res
+            ->withHeader("Access-Control-Allow-Origin", $serverUrl)
+            ->withRedirect("/", 302);
     } else if ($request->isOptions()) {
         $options = [
             "POST" => $accountCreate->getOptionsObject(),
@@ -161,33 +164,41 @@ $logoutMethods = [
 
 $logout = function (Request $request, Response $response): Response {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $logoutMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $logoutMethods));
 
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
-
     if ($request->isGet()) {
         $res = $logoutHtml($container);
         $templateVars = isset($res->templateVars) ? $res->templateVars : [];
         $filepath = "logout.html.twig";
-        return $this->get("templater")->render($res, $filepath, $templateVars);
+        return $container
+            ->get("templater")
+            ->render($res, $filepath, $templateVars);
     }
 };
 
 $app->map($logoutMethods, "/logout[/]", $logout);
 
-$authorizationMethods = [
+$authorizeMethods = [
     "GET",
+];
+
+$authorize = function (Request $request, Response $response): Response {
+    $authorizeHtml = $container->get("authorizeHtmlEndpoint");
+    if ($request->isGet()) {
+        $res = $authorizeHtml($container);
+        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
+        $filepath = "authorize.html.twig";
+        return $this->get("templater")->render($res, $filepath, $templateVars);
+    }
+};
+
+$app->map($authorizeMethods, "/authorize[/]", $authorize);
+
+$authorizationMethods = [
     "POST",
     "DELETE",
     "OPTIONS",
@@ -195,30 +206,15 @@ $authorizationMethods = [
 
 $authorization = function (Request $request, Response $response): Response {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $authorizationMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $authorizationMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
     
-    $authorizationHtml = $container->get("authorizationHtmlEndpoint");
     $authorizationCreate = $container->get("authorizationCreateEndpoint");
     $authorizationDelete = $container->get("authorizationDeleteEndpoint");
-    if ($request->isGet()) {
-        $res = $authorizationHtml($container);
-        $templateVars = isset($res->templateVars) ? $res->templateVars : [];
-        $filepath = "authorization.html.twig";
-        return $this->get("templater")->render($res, $filepath, $templateVars);
-    } else if ($request->isPost()) {
+    if ($request->isPost()) {
         $res = $authorizationCreate($container);
         $server = $this->get("authorizationServer");
 
@@ -246,20 +242,11 @@ $unauthorizeMethods = [
 
 $unauthorize = function (Request $request, Response $response): Response {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $unauthorizeMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $unauthorizeMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $unauthorizeHtml = $container->get("unauthorizeHtmlEndpoint");
     if ($request->isGet()) {
@@ -279,20 +266,11 @@ $clientsMethods = [
 
 $clients = function(Request $request, Response $response) {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $clientsMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $clientsMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $clientsHtml = $container->get("clientsHtmlEndpoint");
     if ($request->isGet()) {
@@ -310,22 +288,16 @@ $optionsMethods = [
     "GET",
 ];
 
-$options = function(Request $request, Response $response) {
+$options = function(
+    Request $request,
+    Response $response) use ($optionsMethods)
+{
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $optionsMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $optionsMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $serverUserOptions = $container->get("ServerUserOptionsHtmlEndpoint");
     if ($request->isGet()) {
@@ -352,33 +324,24 @@ $account = function(
     use ($accountMethods): Response
 {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $accountMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $accountMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $accountCreate = $this->get("accountCreationEndpoint");
     $accountRead = $this->get("accountGetEndpoint");
     $accountUpdate = $this->get("accountUpdateEndpoint");
     $accountDelete = $this->get("accountDeleteEndpoint");
     if ($request->isPost()) {
-        return $accountCreate($request, $res, $container);
+        return $accountCreate($container);
     } else if ($request->isGet()) {
-        return $accountRead($request, $res, $container);
+        return $accountRead($container);
     } else if ($request->isPut()) {
-        return $accountUpdate($request, $res, $container);
+        return $accountUpdate($container);
     } else if ($request->isDelete()) {
-        return $accountDelete($request, $res, $container);
+        return $accountDelete($container);
     } else if ($request->isOptions()) {
         $options = [
             "GET" => $accountRead->getOptionsObject(),
@@ -404,20 +367,11 @@ $profile = function (
     use ($profileMethods): Response
 {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $profileMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $profileMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $profileRead = $this->get("profileReadEndpoint");
     if ($request->isGet()) {
@@ -447,20 +401,11 @@ $package = function (
     use ($packageMethods): Response
 {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $packageMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $packageMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $packageCreate = $this->get("packageCreateEndpoint");
     $packageRead = $this->get("packageReadEndpoint");
@@ -501,20 +446,11 @@ $version = function (
     use ($versionMethods): Response
 {
     $container = $this;
-
-    $container["request"] = function () use ($request) {
-        return $request;
-    };
-
-    $res = $response
+    $container["response"] = $response
         ->withHeader("Allow", implode(",", $versionMethods))
         ->withHeader(
             "Access-Control-Allow-Methods",
             implode(",", $versionMethods));
-
-    $container["response"] = function () use ($res) {
-        return $res;
-    };
 
     $versionCreate = $this->get("versionCreateEndpoint");
     $versionRead = $this->get("versionReadEndpoint");
@@ -538,4 +474,6 @@ $version = function (
 
 $app->map($versionMethods, "/version[/]", $version);
 
+/* Run the app, executing the middleware stack, then the map function, then
+ * the Endpoint, etc. Errors are caught and rendered as HTML. */
 $app->run();

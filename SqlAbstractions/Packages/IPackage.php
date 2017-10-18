@@ -1,9 +1,9 @@
 <?php
 namespace TwinePM\SqlAbstractions\Packages;
 
-use \TwinePM\SqlAbstractions\ISqlAbstraction;
-use \TwinePM\Responses;
-use \PDO;
+use TwinePM\SqlAbstractions\Accounts\IAccount;
+use TwinePM\SqlAbstractions\ISqlAbstraction;
+use TwinePM\SqlAbstractions\Versions\IVersion;
 interface IPackage extends ISqlAbstraction {
     const TYPES = [
         "macro",
@@ -13,33 +13,31 @@ interface IPackage extends ISqlAbstraction {
         "storytheme",
     ];
 
-    public function getOwner(): Responses\IResponse;
+    function getOwner(): IAccount;
 
-    public function getCurrentVersionObject(): Responses\IResponse;
+    function getCurrentVersionAbstraction(): IVersion;
     
-    public function getVersions(string $dataLevel): Responses\IResponse;
+    function getVersions(string $dataLevel): array;
 
-    public function getId(): ?int;
+    function getId(): ?int;
 
-    public function getOwnerId(): int;
-    public function setOwnerId(int $id): Responses\IResponse;
+    function getOwnerId(): int;
+    function setOwnerId(int $id): void;
 
-    public function getAuthorId(): int;
+    function getAuthorId(): int;
 
-    public function getName(): string;
-    public function setName(string $name): Responses\IResponse;
+    function getName(): string;
+    function setName(string $name): void;
 
-    public function getType(): string;
-    public function setType(string $type): Responses\IResponse;
+    function getType(): string;
+    function setType(string $type): void;
 
-    public function getCurrentVersion(): string;
-    public function setCurrentVersion(
-        string $currentVersion): Responses\IResponse;
+    function getCurrentVersion(): string;
+    function setCurrentVersion(string $currentVersion): void;
 
-    public function getDescription(): string;
-    public function setDescription(string $description): Responses\IResponse;
+    function getDescription(): string;
+    function setDescription(string $description): void;
 
-    public function getHomepage(): string;
-    public function setHomepage(string $homepage): Responses\IResponse;
+    function getHomepage(): string;
+    function setHomepage(string $homepage): void;
 }
-?>

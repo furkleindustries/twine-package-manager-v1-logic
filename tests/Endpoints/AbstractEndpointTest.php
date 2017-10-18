@@ -1,7 +1,6 @@
 <?php
 use PHPUnit\Framework\TestCase;
 use TwinePM\Endpoints\AbstractEndpoint;
-
 class AbstractEndpointTest extends TestCase {
     function testGetOptionsJson() {
         $stub = $this->getMockForAbstractClass(AbstractEndpoint::class);

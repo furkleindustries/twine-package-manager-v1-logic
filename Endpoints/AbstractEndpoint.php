@@ -9,6 +9,7 @@ abstract class AbstractEndpoint implements IEndpoint {
     abstract function getOptionsObject(): array;
 
     function getOptionsJson(): string {
-        return json_encode($this->getOptionsObject());
+        $json = json_encode($this->getOptionsObject());
+        return $json ? $json : "{}";
     }
 }

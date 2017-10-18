@@ -6,7 +6,7 @@ use Slim\Container;
 use TwinePM\Exceptions\InvalidArgumentException;
 use TwinePM\Exceptions\NoResultExistsException;
 use TwinePM\Exceptions\PersistenceFailedException;
-class AuthorizationHtmlEndpoint extends AbstractEndpoint {
+class AuthorizeHtmlEndpoint extends AbstractEndpoint {
     function __invoke(Container $container): ResponseInterface {
         $source = $request->getQueryParams();
         if (!isset($source["state"]) or !$source["state"]) {
@@ -27,25 +27,9 @@ class AuthorizationHtmlEndpoint extends AbstractEndpoint {
             throw new InvalidArgumentException($errorCode);
         }
 
-        $cache = $container->get("cacheClient");
-        $requestId = null;
-        $maxAttempts = 5;
-        for ($attempts = 0; $attempts < $maxAttempts; $attempts += 1) {
-            $attempt = $container->get("requestId");
-            
-            /* Do not replace keys. This should prevent collisions. */
-            if (!$cache->EXISTS($attempt)) {
-                $requestId = $attempt;
-                break;
-            }
-        }
-
-        if (!$requestId) {
-            $errorCode = "RequestIdGenerationFailed";
-            throw new RequestIdGenerationFailedException($errorCode);
-        }
-
         $authServer = $container->get("authorizationServer");
+
+        /* Throws exception if invalid. */
         $authRequest = $authServer->validateAuthorizationRequest($request);
 
         $value = [
@@ -55,7 +39,8 @@ class AuthorizationHtmlEndpoint extends AbstractEndpoint {
 
         $key = "persistAuthorizationRequest";
         $persistAuthorizationRequest = $container->get($key);
-        $persistAuthorizationRequest($requestId, $authRequest);
+        $domain = $container->get("serverDomainName");
+        $persistAuthorizationRequest($domain, $authRequest);
 
         $clientRepo = $container->get("clientRepository");
         $clients = $clientRepo->getClients();

@@ -1,8 +1,9 @@
 <?php
 namespace TwinePM\ServiceProviders;
 
-use Slim\ContainerInterface;
-use Slim\DefaultServicesProvider;
+use Pimple\Container;
+use Pimple\ServiceProviderInterface;
+use TwinePM\Getters\AppSettingsGetter;
 use TwinePM\Getters\AuthorizedUserGetter;
 use TwinePM\Getters\AuthorizationTokenGetter;
 use TwinePM\Getters\AuthorizationServerGetter;
@@ -17,9 +18,17 @@ use TwinePM\Getters\KeyGetter;
 use TwinePM\Getters\RequestIdGetter;
 use TwinePM\Getters\SaltGetter;
 use TwinePM\Getters\ServerDomainNameGetter;
+use TwinePm\Getters\TwinePmEpochGetter;
+class GetterServiceProvider implements ServiceProviderInterface {
+    function register(Container $container) {
+        $appSettings = function () {
+            return $this->get("appSettingsGetter")();
+        };
 
-class GetterServiceProvider extends DefaultServicesProvider {
-    function register(ContainerInterface $container) {
+        $appSettingsGetter = function () {
+            return new AppSettingsGetter();
+        };
+
         $container["authorizationToken"] = function () {
             $authorizationTokenGetter = $this->get("authorizationTokenGetter");
             return $authorizationTokenGetter($this->get("request"));
@@ -34,7 +43,32 @@ class GetterServiceProvider extends DefaultServicesProvider {
         };
 
         $container["authorizationServerGetter"] = function () {
-            return new AuthorizationServerGetter();
+            $builder = function (
+                $privateKey,
+                $encryptionKey,
+                $accessTokenRepository
+                $clientRepository,
+                $scopeRepository)
+            {
+                return new AuthorizationServer(
+                    $clientRepository,
+                    $accessTokenRepository,
+                    $scopeRepository,
+                    $privateKey,
+                    $encryptionKey);
+            };
+
+            $tokenLifeInterval = new DateInterval("P30D");
+            return new AuthorizationServerGetter(
+                $this->get("oAuthCryptKey"),
+                $this->get("oAuthEncryptionKey"),
+                $tokenLifeInterval,
+                $this->get("accessTokenRepository"),
+                $this->get("clientRepository"),
+                $this->get("scopeRepository"),
+                $this->get("implicitGrant"),
+                $this->get("filePathToFileContentsTransformer"),
+                $builder);
         };
 
         $container["authorizedUser"] = function () {
@@ -45,6 +79,19 @@ class GetterServiceProvider extends DefaultServicesProvider {
 
         $container["authorizedUserGetter"] = function () {
             return new AuthorizedUserGetter();
+        };
+
+        $container["cryptKey"] = function () {
+            return $this->get("cryptKeyGetter")();
+        };
+
+        $container["cryptKeyGetter"] = function () {
+            $filePath = __DIR__ . "/../crypto/oAuthPrivate.key";
+            $builder = function ($filePath) {
+                return new CryptKey($filePath);
+            };
+
+            return new CryptKeyGetter($filePath, $builder);
         };
 
         $container["diskDatabaseClient"] = function () {
@@ -61,27 +108,26 @@ class GetterServiceProvider extends DefaultServicesProvider {
         };
 
         $container["diskDatabaseClientArgs"] = function () {
-            $key = "diskDatabaseClientArgsGetter";
-            $diskDatabaseClientArgsGetter = $this->get($key);
-            $diskDatabaseServerUrl = $this->get("diskDatabaseServerUrl");
-            return $diskDatabaseClientArgsGetter($diskDatabaseServerUrl);
+            return $this->get("diskDatabaseClientArgsGetter")();
         };
 
         $container["diskDatabaseClientArgsGetter"] = function () {
-            return new DiskDatabaseClientArgsGetter();
+            $serverUrl = $this->get("diskDatabaseServerUrl");
+            return new DiskDatabaseClientArgsGetter($serverUrl);
         };
 
-        $key = "databaseClientWithExceptions";
+        $key = "diskDatabaseClientWithExceptions";
         $container[$key] = $container->factory(function () {
-            $client = $this->get("databaseClient");
+            $client = $this->get("diskDatabaseClient");
             $errmodeKey = $client::ATTR_ERRMODE;
             $errmodeValue = $client::ERRMODE_EXCEPTION;
             $client->setAttribute($errmodeKey, $errmodeValue);
             return $client;
         });
 
-        $container["databaseServerDsn"] = function () {
+        $container["diskDatabaseServerDsn"] = function () {
             $driver = "pgsql";
+            $dbArgs = $this->get("diskDatabaseClientArgs");
             $dbName = ltrim($dbArgs["path"], "/");
             $charset = "utf8";
             return $this->get("makeDsn")(
@@ -92,24 +138,20 @@ class GetterServiceProvider extends DefaultServicesProvider {
                 $charset);
         };
 
-        $container["databaseServerUrlGetter"] = function () {
-            return new DatabaseServerUrlGetter();
+        $container["diskDatabaseServerUrlGetter"] = function () {
+            return new DiskDatabaseServerUrlGetter();
         };
 
-        $container["databaseServerUrl"] = function () {
-            return $this->get("databaseServerUrlGetter")();
+        $container["diskDatabaseServerUrl"] = function () {
+            return $this->get("diskDatabaseServerUrlGetter")();
         };
 
         $container["dsnGetter"] = function () {
-            return new DsnGetter();
+            return new DsnGetter($this->get("diskDatabaseClientArgs"));
         };
 
         $container["dsn"] = function () {
-            return $this->get("dsnGetter")($this->get("databaseClientArgs"));
-        };
-
-        $container["fileContentsGetter"] = function () {
-            return new FileContentsGetter();
+            return $this->get("dsnGetter")();
         };
 
         $container["key"] = function () {
@@ -124,15 +166,15 @@ class GetterServiceProvider extends DefaultServicesProvider {
             return new KeyGetter();
         };
 
-        $container["loggedInUserGetter"] = function () {
-            return new LoggedInUserGetter();
-        };
-
         $container["loggedInUser"] = function () {
             $request = $this->get("request");
             $cache = $this->get("cacheClient");
             return $this->get("loggedInUserGetter")($request, $cache);
-        });
+        };
+
+        $container["loggedInUserGetter"] = function () {
+            return new LoggedInUserGetter();
+        };
 
         $container["memoryDatabaseClient"] = function () {
             $cacheClientGetter = $this->get("cacheClientGetter");
@@ -152,19 +194,19 @@ class GetterServiceProvider extends DefaultServicesProvider {
         };
 
         $container["requestId"] = function () {
-            return $this->get("requestIdGetter")($this->get("key"));
+            return $this->get("requestIdGetter")();
         };
 
         $container["requestIdGetter"] = function () {
-            return new RequestIdGetter();
+            return new RequestIdGetter($this->get("key"));
         };
 
         $container["salt"] = $container->factory(function () {
-            return $this->get("saltGetter")($this->get("key"));
+            return $this->get("saltGetter")();
         });
 
         $container["saltGetter"] = function () {
-            return new SaltGetter();
+            return new SaltGetter($this->get("key"));
         };
 
         $container["serverDomainName"] = function () {
@@ -175,25 +217,12 @@ class GetterServiceProvider extends DefaultServicesProvider {
             return new ServerDomainNameGetter();
         };
 
-        $container["templater"] = function () {
-            return $this->get("templaterGetter")();
+        $container["twinePmEpoch"] = function () {
+            return $this->get("twinePmEpochGetter")();
         };
 
-        $container["templaterGetter"] = function () {
-            $view = new Twig(__DIR__ . "/templates/", [
-                "cache" => "templates/compilation_cache/",
-            ]);
-            
-            /* Instantiate and add Slim specific extension. */
-            $untrimmed = str_ireplace(
-                "index.php",
-                "",
-                $container["request"]->getUri()->getBasePath());
-
-            $basePath = rtrim($untrimmed, "/");
-            $router = $container->get("router");
-            $view->addExtension(new TwigExtension($router, $basePath));
-            return $view;
+        $container["twinePmEpochGetter"] = function () {
+            return new TwinePmEpochGetter();
         };
     }
 }

@@ -1,33 +1,54 @@
 <?php
 namespace TwinePM\Getters;
 
-use League\OAuth2\Server\AuthorizationServer;
-use League\OAuth2\Server\Grant\ImplicitGrant;
+use League\OAuth2\Repositories\AccessTokenRepositoryInterface;
+use League\OAuth2\Repositories\ClientRepositoryInterface;
+use League\OAuth2\Repositories\ScopeRepositoryInterface;
 use League\OAuth2\Server\CryptKey;
-use TwinePM\OAuth2\Repositories;
-use TwinePM\Responses;
-use DateInterval;
+use League\OAuth2\Server\Grant\ImplicitGrant;
 class OAuth2AuthorizationServerGetter implements IGetter {
-    function __invoke(array $context = null): AuthorizationServer {
-        $privateKey = new CryptKey(__DIR__ . "/../OAuth2/private.key");
+    private $privateKey;
+    private $encryptionKey;
+    private $tokenLife;
+    private $accessTokenRepository;
+    private $clientRepository;
+    private $scopeRepository;
+    private $grant;
+    private $filePathToFileContentsTransformer;
+    private $authorizationServerBuilder;
 
-        $clientRepository = new Repositories\ClientRepository();
-        $scopeRepository = new Repositories\ScopeRepository();
-        $accessTokenRepository = new Repositories\AccessTokenRepository(
-            $privateKey);
+    function __construct(
+        CryptKey $privateKey,
+        string $encryptionKey,
+        string $tokenLifeInterval,
+        AccessTokenRepositoryInterface $accessTokenRepository,
+        ClientRepositoryInterface $clientRepository,
+        ScopeRepositoryInterface $scopeRepository,
+        ImplicitGrant $grant,
+        callable $filePathToFileContentsTransformer,
+        callable $authorizationServerBuilder)
+    {
+        $this->cryptKey = $cryptKey;
+        $this->encryptionKey = $encryptionKey;
+        $this->tokenLife = $tokenLife;
+        $this->accessTokenRepository = $accessTokenRepository;
+        $this->clientRepository = $clientRepository;
+        $this->scopeRepository = $scopeRepository;
+        $this->filePathToFileContentsTransformer =
+            $filePathToFileContentsTransformer;
+        $this->authorizationServerBuilder = $authorizationServerBuilder;
+    }
 
-        $encryptionKey = file_get_contents(__DIR__ . "/../OAuth2/encryptionKey");
-        $server = new AuthorizationServer(
-            $clientRepository,
-            $accessTokenRepository,
-            $scopeRepository,
-            $privateKey,
-            $encryptionKey
+    function __invoke() {
+        $server = $authorizationServerBuilder(
+            $this->clientRepository,
+            $this->scopeRepository,
+            $this->accessTokenRepository,
+            $this->privateKey,
+            $this->encryptionKey
         );
 
-        $oneMonth = new DateInterval('P30D');
-        $implicitGrant = new ImplicitGrant($oneMonth);
-        $server->enableGrantType($implicitGrant, $oneMonth);
+        $server->enableGrantType($this->grant, $this->tokenLifeInterval);
         return $server;
     }
 }

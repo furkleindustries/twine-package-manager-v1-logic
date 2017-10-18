@@ -3,7 +3,7 @@ namespace TwinePM\Endpoints;
 
 use Psr\Http\Message\ResponseInterface;
 use Slim\Container;
-class PackageGetEndpoint extends AbstractEndpoint {
+class PackageReadEndpoint extends AbstractEndpoint {
     function __invoke(Container $container): ResponseInterface {
         $request = $container->get("request");
         $params = $request->getQueryParams();
@@ -56,5 +56,9 @@ class PackageGetEndpoint extends AbstractEndpoint {
         $body->write($successStr);
         $response = $container->get("response")->withBody($body);
         return $response;
+    }
+
+    function getOptionsObject(): array {
+        return [];
     }
 }

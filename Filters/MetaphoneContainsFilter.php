@@ -1,26 +1,23 @@
 <?php
 namespace TwinePM\Filters;
 
-use \TwinePM\Responses;
-use \TwinePM\Validators\SearchFilterSourceValidator;
-class MetaphoneContainsFilter {
-    public static function filter(
-        $value,
-        array $context = null): Responses\IResponse
-    {
-        $validationResponse = SearchFilterSourceValidator::validate($value);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
+class MetaphoneContainsFilter implements ISearchFilter {
+    private $validator;
 
-        $query = $value["query"];
+    function __construct(callable $validator) {
+        $this->validator = $validator;
+    }
+
+    function __invoke($value) {
+        /* Throws exception if invalid. */
+        $this->validator($value);
+
+        $query = trim($value["query"]);
         $results = $value["results"];
         $targets = $value["targets"];
 
         if (in_array(static::SEARCH_GLOBAL_SELECTORS, $query)) {
-            $success = new Responses\Response();
-            $success->filtered = $results;
-            return $success;
+            return $results;
         }
 
         $func = function ($row) use ($query, $targets) {
@@ -34,11 +31,6 @@ class MetaphoneContainsFilter {
             return false;
         };
 
-        $filtered = array_filter($results, $func);
-
-        $success = new Responses\Response();
-        $success->filtered = $filtered;
-        return $success;
+        return array_filter($results, $func);
     }
 }
-?>

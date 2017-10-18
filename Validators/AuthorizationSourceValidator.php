@@ -1,103 +1,101 @@
 <?php
 namespace TwinePM\Validators;
 
-use \TwinePM\Responses;
-use \TwinePM\OAuth2\Repositories\ClientRepository;
-use \TwinePM\OAuth2\Repositories\ScopeRepository;
+use TwinePM\Exceptions\ArgumentInvalidException;
+use TwinePM\Exceptions\ServerErrorException;
 class AuthorizationSourceValidator implements IValidator {
-    public static function validate(
-        $value,
-        array $context = null): Responses\IResponse
+    private $clientIds;
+    private $scopeIds;
+    private $twinePmEpoch;
+    private $idFilter;
+    private $nameValidator;
+
+    function __construct(
+        array $clientIds,
+        array $scopeIds,
+        int $twinePmEpoch,
+        callable $idFilter,
+        callable $nameValidator)
     {
+        $this->clientIds = $clientIds;
+        $this->scopeIds = $scopeIds;
+        $this->twinePmEpoch = $twinePmEpoch;
+        $this->idFilter = $idFilter;
+        $this->nameValidator = $nameValidator;
+    }
+
+    function __invoke($value): void {
         if (gettype($value) !== "array") {
-            $errorCode = "AuthorizationSourceValidatorValueInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "ValueInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
         if (array_key_exists("userId", $value)) {
-            $validationResponse = IdValidator::validate($value["userId"]);
-            if ($validationResponse->isError()) {
-                return $validationResponse;
-            }
+            /* Throws exception if invalid. */
+            $this->$idFilter($value["userId"]);
         } else {
-            $errorCode = "AuthorizationSourceValidatorIdMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "UserIdMissing";
+            throw new ServerErrorException($errorCode);
         }
 
-        if (array_key_exists("client", $value)) {
-            $client = $value["client"];
-            $clients = (new ClientRepository())->getClients();
-            if (!array_key_exists($client, $clients)) {
-                $errorCode = "AuthorizationSourceValidatorClientInvalid";
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
-            }
-        } else {
-            $errorCode = "AuthorizationSourceValidatorClientMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (!array_key_exists("client", $value)) {
+            $errorCode = "ClientMissing";
+            throw new ServerErrorException($errorCode);
+        } else if (gettype($value["client"]) !== "string" or
+            !array_key_exists($value["client"], $this->clientIds))
+        {
+            $errorCode = "ClientInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
         if (array_key_exists("scopes", $value)) {
             $scopes = $value["scopes"];
             if (gettype($scopes) !== "array") {
-                $errorCode = "AuthorizationSourceValidatorScopesInvalid";
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;
+                $errorCode = "ScopesInvalid";
+                throw new ServerErrorException($errorCode);
             } else if (!$scopes) {
-                $errorCode = "AuthorizationSourceValidatorScopesEmpty";
-                $error = new Responses\ErrorResponse($errorCode);
-                return $error;                
+                $errorCode = "ScopesEmpty";
+                throw new ArgumentInvalidException($errorCode);
             }
 
             foreach ($scopes as $scope) {
-                if (!array_key_exists($scope, ScopeRepository::SCOPES)) {
-                    $errorCode = "AuthorizationSourceValidatorScopeInvalid";
-                    $error = new Responses\ErrorResponse($errorCode);
-                    return $error;
+                if (gettype($scope) !== "string") {
+                    $errorCode = "ScopeInvalid";
+                    throw new ServerErrorException($errorCode);
+                } else if (!array_key_exists($scope, $this->scopeIds)) {
+                    $errorCode = "ScopeInvalid";
+                    throw new ArgumentInvalidException($errorCode);
                 }
             }
         } else {
-            $errorCode = "AuthorizationSourceValidatorClientMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "ScopesMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
         if (!array_key_exists("ip", $value)) {
-            $errorCode = "AuthorizationSourceValidatorIpMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!$value["ip"] or gettype($value["ip"]) !== "string") {
-            $errorCode = "AuthorizationSourceValidatorIpInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "IpMissing";
+            throw new ServerErrorException($errorCode);
+        } else if (gettype($value["ip"]) !== "string" or !$value["ip"]) {
+            $errorCode = "IpInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
         if (!array_key_exists("oAuthToken", $value)) {
-            $errorCode = "AuthorizationSourceValidatorOAuthTokenMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "OAuthTokenMissing";
+            throw new ServerErrorException($errorCode);
         } else if (gettype($value["oAuthToken"]) !== "string" or
             !$value["oAuthToken"])
         {
-            $errorCode = "AuthorizationSourceValidatorOAuthTokenInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "OAuthTokenInvalid";
+            throw new ServerErrorException($errorCode);
         }
 
-        $timeCreated = isset($value["timeCreated"]) ?
-            $value["timeCreated"] : null;
         if (array_key_exists("timeCreated", $value) and
-            (gettype($timeCreated) !== "integer" or $timeCreated < 0))
+            (gettype($value["timeCreated"]) !== "integer" or
+                !($value["timeCreated"] > $this->twinePmEpoch)))
         {
-            $errorCode = "AuthorizationSourceValidatorTimeCreatedInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "TimeCreatedInvalid";
+            throw new ServerErrorException($errorCode);
         }
-
-        $success = new Responses\Response();
-        return $success;
     }
 }

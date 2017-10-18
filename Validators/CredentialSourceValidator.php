@@ -1,47 +1,52 @@
 <?php
 namespace TwinePM\Validators;
 
-use \TwinePM\Responses;
+use TwinePM\Exceptions\ArgumentInvalidException;
+use TwinePM\Exceptions\ServerErrorException;
 class CredentialSourceValidator implements IValidator {
-    public static function validate(
-        $value,
-        array $context = null): Responses\IResponse
-    {
+    private $idFilter;
+    private $nameValidator;
+
+    function __construct(callable $idFilter, callable $nameValidator) {
+        $this->$idFilter = $idFilter;
+        $this->$nameValidator = $nameValidator;
+    }
+
+    function __invoke($value) {
+        if (gettype($value) !== "array") {
+            $errorCode = "ValueInvalid";
+            throw new ServerErrorException($errorCode);
+        }
+
         if (array_key_exists("id", $value)) {
-            $validationResponse = IdValidator::validate($value["id"]);
-            if ($validationResponse->isError()) {
-                return $validationResponse;
-            }
+            /* Throws exception if invalid. */
+            $this->$idFilter($value["id"]);
         }
 
         if (array_key_exists("name", $value)) {
-            $validationResponse = NameValidator::validate($value["name"]);
-            if ($validationResponse->isError()) {
-                return $validationResponse;
-            }
+            /* Throws exception if invalid. */
+            $this->$nameValidator($value["name"]);
+        } else {
+            $errorCode = "NameMissing";
+            throw new ArgumentInvalidException($errorCode);
         }
 
         $hash = isset($value["hash"]) ? $value["hash"] : null;
-        if (!array_key_exists("hash", $value)) {
-            $errorCode = "CredentialSourceValidatorHashMissing";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
-        } else if (!$hash or gettype($hash) !== "string") {
-            $errorCode = "CredentialSourceValidatorHashInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+        if (array_key_exists("hash", $value)) {
+            if (gettype($value["hash"]) !== "string") {
+                $errorCode = "HashInvalid";
+                throw new ServerErrorException($errorCode);
+            } else if (!$value["hash"]) {
+                $errorCode = "HashEmpty";
+                throw new ArgumentInvalidException($errorCode);
+            }
         }
 
-        $validated = isset($value["validated"]) ? $value["validated"] : null;
-        if (isset($value["validated"]) and
-            gettype($validated) !== "boolean")
+        if (array_key_exists("validated", $value) and
+            gettype($value["validated"]) !== "boolean")
         {
-            $errorCode = "CredentialSourceValidatorValidatedInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;
+            $errorCode = "ValidatedInvalid";
+            throw new ArgumentInvalidException($errorCode);
         }
-
-        $success = new Responses\Response();
-        return $success;
     }
 }

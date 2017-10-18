@@ -1,17 +1,19 @@
 <?php
 namespace TwinePM\SqlAbstractions\Authorizations;
 
-use \TwinePM\SqlAbstractions\ISqlAbstraction;
-use \TwinePM\Responses;
+use TwinePM\SqlAbstractions\Accounts\IAccount;
+use TwinePM\SqlAbstractions\Credentials\ICredential;
+use TwinePM\SqlAbstractions\ISqlAbstraction;
 interface IAuthorization extends ISqlAbstraction {
-    public function getAccount(): Responses\IResponse;
-    public function getCredential(): Responses\IResponse;
-    public function getClientObject(): ?array;
+    function getAccount(): IAccount;
+    function getCredential(): ICredential;
+    function getClientObject(): ?array;
     
-    public function getGlobalAuthorizationId(): ?int;
-    public function getUserId(): int;
-    public function getClient(): string;
-    public function getScopes(): array;
-    public function getOAuthToken(): string;
-    public function getTimeCreated(): ?int;
+    function getGlobalAuthorizationId(): ?int;
+    function getUserId(): int;
+    function getClient(): string;
+    function getScopes(): array;
+    function getOAuthToken(): string;
+    function getTimeCreated(): ?int;
+    function getIp(): string;
 }

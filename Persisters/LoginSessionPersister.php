@@ -5,18 +5,33 @@ use TwinePM\Exceptions\InvalidArgumentException;
 use TwinePM\Exceptions\NoResultExistsException;
 use TwinePM\Exceptions\PersistenceFailedException;
 class LoginSessionPersister {
-    function persist(
+    private $diskDatabaseClient;
+    private $memoryDatabaseClient;
+    private $requestIdGetter;
+    private $saltGetter;
+    private $encryptionTransformer;
+    private $digestTransformer;
+
+    function __construct(
+        PDO $diskDatabaseClient,
+        Client $memoryDatabaseClient,
+        callable $requestIdGetter,
+        callable $saltGetter,
+        callable $encryptionTransformer)
+    {
+        $this->diskDatabaseClient = $diskDatabaseClient;
+        $this->memoryDatabaseClient = $memoryDatabaseClient;
+        $this->requestIdGetter = $requestIdGetter;
+        $this->saltGetter = $saltGetter;
+        $this->encryptionTransformer = $encryptionTransformer;
+    }
+
+    function __invoke(
         string $requestId,
         int $userId,
-        string $salt,
-        string $domain,
-        AuthorizationRequest $authRequest,
-        Client $cache,
-        PDO $database,
-        callable $encrypt,
-        callable $generateHmac): void
+        string $domain): void
     {
-        $db = $database;
+        $db = $this->diskDatabaseClient;
         $db->setAttribute($db::ATTR_ERRMODE, $db::ERRMODE_EXCEPTION);
         $queryStr = "SELECT name FROM credentials WHERE id = :id";
         $stmt = $db->prepare($queryStr);
@@ -25,7 +40,7 @@ class LoginSessionPersister {
 
         $fetch = $stmt->fetch($db::FETCH_ASSOC);
         if (!$fetch) {
-            $errorCode = "IdNotInCredentials";
+            $errorCode = "LoginSessionPersistenceFailed";
             throw new NoResultExistsException($errorCode);
         }
 

@@ -1,17 +1,24 @@
 <?php
 namespace TwinePM\OAuth2\Repositories;
 
-use \League\OAuth2\Server\Repositories\ClientRepositoryInterface;
-use \TwinePM\OAuth2\Entities\ClientEntity;
-class ClientRepository implements ClientRepositoryInterface {
+use League\OAuth2\Server\Repositories\ClientRepositoryInterface;
+use TwinePM\OAuth2\Entities\ClientEntity;
+class ClientRepository implements IClientRepository {
     private $clients = [];
 
-    public function __construct() {
-        $clientDir = __DIR__ . "/../clients/";
-        $entries = scandir($clientDir);
+    function __construct(
+        string $clientDirectory,
+        callable $clientEntityBuilder,
+        callable $directoryPathToChildFilepathsTransformer,
+        callable $filePathToFileContentsTransformer,
+        callable $fileExistsValidator)
+    {
+        $entries = $filePathToFileContentsTransformer($clientDir);
         foreach ($entries as $entry) {
-            if (is_file($clientDir . $entry)) {
-                $contents = file_get_contents($clientDir . $entry);
+            $filePath = $clientDir . $entry;
+            try {
+                $fileExistsValidator();
+                $contents = $filePathToFileContentsTransformer($filePath);
                 $yesAssoc = true;
                 $clientObject = json_decode($contents, $yesAssoc);
                 if (gettype($clientObject) === "array") {
@@ -23,11 +30,14 @@ class ClientRepository implements ClientRepositoryInterface {
 
                     $this->clients[$identifier] = $clientObject;
                 }
+            } catch (Exception $e) {
+                /* File is directory or loading failed, skip it.
+                 * TODO: logging */
             }
         }
     }
 
-    public function getClients(): array {
+    function getClientsNoSecrets(): array {
         $clients = $this->clients;
         foreach ($clients as $key => $value) {
             unset($clients[$key]["secret"]);
@@ -36,7 +46,7 @@ class ClientRepository implements ClientRepositoryInterface {
         return $clients;
     }
 
-    public function getClientEntity(
+    function getClientEntity(
         $clientIdentifier,
         $grantType,
         $clientSecret = null,

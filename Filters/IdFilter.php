@@ -1,25 +1,17 @@
 <?php
 namespace TwinePM\Filters;
 
-use \TwinePM\Responses;
 class IdFilter implements IFilter {
-    public static function filter(
-        $value,
-        array $context = null): Responses\IResponse
-    {
+    function __invoke($value) {
         $type = gettype($value);
         if (($type !== "string" and $type !== "integer") or
             ($type === "string" and !ctype_digit($value)) or
             ($type === "integer" and $value < 0))
         {
-            $errorCode = "IdFilterIdInvalid";
-            $error = new Responses\ErrorResponse($errorCode);
-            return $error;   
+            $errorCode = "IdInvalid";
+            throw new ArgumentInvalidException($errorCode);
         }
 
-        $success = new Responses\Response();
-        $success->filtered = (int)$value;
-        return $success;
+        return (int)$value;
     }
 }
-?>

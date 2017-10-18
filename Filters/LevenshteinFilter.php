@@ -1,27 +1,24 @@
 <?php
 namespace TwinePM\Filters;
 
-use \TwinePM\Responses;
-use \TwinePM\Validators\SearchFilterSourceValidator;
-class LevenshteinFilter implements IFilter {
+class LevenshteinFilter implements ISearchFilter {
     const MAX_LEVENSHTEIN = 5;
-    
-    public static function filter(
-        $value,
-        array $context = null): Responses\IResponse
-    {
-        $validationResponse = SearchFilterSourceValidator::validate($value);
-        if ($validationResponse->isError()) {
-            return $validationResponse;
-        }
 
-        $query = $value["query"];
+    private $validator;
+
+    function __construct(callable $validator) {
+        $this->validator = $validator;
+    }
+    
+    function __invoke($value) {
+        /* Throws exception if invalid. */
+        $this->validator($value);
+
+        $query = trim($value["query"]);
         $results = $value["results"];
         $targets = $value["targets"];
 
         if (in_array(static::SEARCH_GLOBAL_SELECTORS, $query)) {
-            $success = new Responses\Response();
-            $success->filtered = $results;
             return $results;
         }
 
@@ -38,11 +35,6 @@ class LevenshteinFilter implements IFilter {
             return false;
         };
 
-        $filtered = array_filter($results, $func);
-
-        $success = new Responses\Response();
-        $success->filtered = $filtered;
-        return $success;
+        return array_filter($results, $func);
     }
 }
-?>
