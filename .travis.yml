@@ -12,4 +12,4 @@ install:
   - docker build -t logic .
   - docker run -d --name logic logic
 
-script: docker exec -t logic vendor/bin/phpunit
+script: docker exec logic vendor/bin/phpunit
